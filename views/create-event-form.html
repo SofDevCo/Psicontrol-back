@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criar Evento</title>
+</head>
+<body>
+    <h1>Criar Evento</h1>
+    <form action="/create-event" method="POST">
+        <label for="name">Nome:</label>
+        <input type="text" id="name" name="name" required><br><br>
+
+        <label for="cpf">CPF:</label>
+        <input type="text" id="cpf" name="cpf" required><br><br>
+
+        <label for="contact">Número para Contato:</label>
+        <input type="text" id="contact" name="contact" required><br><br>
+
+        <label for="date">Data:</label>
+        <input type="date" id="date" name="date" required><br><br>
+
+        <label for="startTime">Hora de Entrada:</label>
+        <input type="time" id="startTime" name="startTime" required><br><br>
+
+        <label for="endTime">Hora de Saída:</label>
+        <input type="time" id="endTime" name="endTime" required><br><br>
+
+        <button type="submit">Criar Evento</button>
+    </form>
+</body>
+</html>
