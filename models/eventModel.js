@@ -2,32 +2,29 @@ const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
 const Evento = sequelize.define('Evento', {
-    name: {
-        type: DataTypes.STRING,
-        allowNull: false,
+    customers_id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
     },
-    cpf: {
+    event_name: {
         type: DataTypes.STRING,
-        allowNull: false,
-    },
-    contact_number: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true, 
     },
     date: {
         type: DataTypes.DATEONLY,
-        allowNull: false,
+        allowNull: true, 
     },
-    start_time: {
-        type: DataTypes.TIME,
-        allowNull: false,
+    google_event_id: {
+        type: DataTypes.STRING,
+        allowNull: true, 
     },
-    end_time: {
-        type: DataTypes.TIME,
-        allowNull: false,
+    created_at: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW,
     },
 }, {
-    tableName: 'eventos',
+    tableName: 'events',
     timestamps: false,
 });
 
