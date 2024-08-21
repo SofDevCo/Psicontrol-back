@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const bodyParser = require('body-parser');
 const { oauth2Client, authUrl } = require('./config/oauth2');
 const eventRoutes = require('./routes/eventRoutes');
@@ -7,8 +8,12 @@ const eventRoutes = require('./routes/eventRoutes');
 const app = express();
 const port = 3000;
 
+// Configurar o bodyParser
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+
+// Servir arquivos estáticos da pasta 'views'
+app.use(express.static(path.join(__dirname, 'views')));
 
 // Rota principal
 app.get('/', (req, res) => {

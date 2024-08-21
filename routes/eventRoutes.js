@@ -6,18 +6,18 @@ const { createEvent } = require('../controllers/eventController');
 router.get('/create-event-form', (req, res) => {
     res.send(`
         <form action="/events/create-event" method="POST">
-            <label for="name">Nome:</label>
-            <input type="text" id="name" name="name" required><br>
-            <label for="cpf">CPF:</label>
-            <input type="text" id="cpf" name="cpf" required><br>
-            <label for="contact_number">Número de Contato:</label>
-            <input type="text" id="contact_number" name="contact_number" required><br>
+            <label for="event_name">Nome do Evento:</label>
+            <input type="text" id="event_name" name="event_name" required><br><br>
+
             <label for="date">Data:</label>
-            <input type="date" id="date" name="date" required><br>
+            <input type="date" id="date" name="date" required><br><br>
+
             <label for="start_time">Hora de Início:</label>
-            <input type="time" id="start_time" name="start_time" required><br>
+            <input type="time" id="start_time" name="start_time" required><br><br>
+
             <label for="end_time">Hora de Término:</label>
-            <input type="time" id="end_time" name="end_time" required><br>
+            <input type="time" id="end_time" name="end_time" required><br><br>
+
             <button type="submit">Criar Evento</button>
         </form>
     `);
