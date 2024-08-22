@@ -1,5 +1,5 @@
 const { google } = require('googleapis');
-const { createEvent: saveEvent } = require('../services/eventService');
+const { createEvent: saveEvent, eventExists } = require('../services/eventService');
 const { oauth2Client } = require('../config/oauth2');
 
 const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
@@ -18,19 +18,27 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
         const events = response.data.items;
 
         for (const event of events) {
-            const existingEvent = await saveEvent({
-                event_name: event.summary,
-                date: event.start.dateTime.split('T')[0],
-                start_time: event.start.dateTime.split('T')[1].split(':')[0] + ':' + event.start.dateTime.split('T')[1].split(':')[1],
-                end_time: event.end.dateTime.split('T')[1].split(':')[0] + ':' + event.end.dateTime.split('T')[1].split(':')[1],
-                google_event_id: event.id,
-            });
+            // Verifica se o evento já existe no banco de dados
+            const existingEvent = await eventExists(event.id);
 
-            console.log('Evento salvo no banco de dados:', existingEvent);
+            if (!existingEvent) {
+                // Se o evento não existir, salva no banco de dados
+                const newEvent = await saveEvent({
+                    event_name: event.summary,
+                    date: event.start.dateTime.split('T')[0],
+                    start_time: event.start.dateTime.split('T')[1].split(':')[0] + ':' + event.start.dateTime.split('T')[1].split(':')[1],
+                    end_time: event.end.dateTime.split('T')[1].split(':')[0] + ':' + event.end.dateTime.split('T')[1].split(':')[1],
+                    google_event_id: event.id,
+                });
+
+                console.log('Evento salvo no banco de dados:', newEvent);
+            } else {
+                console.log('Evento já existe no banco de dados:', existingEvent);
+            }
         }
     } catch (error) {
         console.error('Erro ao sincronizar eventos com o banco de dados:', error);
-        throw new Error('Erro ao sincronizar eventos.')
+        throw new Error('Erro ao sincronizar eventos.');
     }
 };
 
