@@ -6,7 +6,7 @@ const { handleOAuth2Callback, authUrl } = require('../controllers/authController
 router.get('/', (req, res) => {
     res.send(`
         <h1>Bem-vindo ao Sistema de Eventos</h1>
-        <p><a href="${authUrl}">Autenticar com o Google Calendar</a></p>
+        <p><a href="${authUrl}">Continuar com o Google Calendar</a></p>
     `);
 });
 
