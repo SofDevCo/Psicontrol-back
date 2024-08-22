@@ -30,7 +30,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
         }
     } catch (error) {
         console.error('Erro ao sincronizar eventos com o banco de dados:', error);
-        throw new Error('Erro ao sincronizar eventos.');
+        throw new Error('Erro ao sincronizar eventos.')
     }
 };
 
