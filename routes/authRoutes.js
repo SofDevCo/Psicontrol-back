@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { handleOAuth2Callback, authUrl } = require('../controllers/authController');
+const { handleOAuth2Callback, authUrl, initiateGoogleAuth } = require('../controllers/authController');
 
-// Rota principal
 router.get('/', (req, res) => {
     res.send(`
         <h1>Bem-vindo ao Sistema de Eventos</h1>
@@ -10,7 +9,7 @@ router.get('/', (req, res) => {
     `);
 });
 
-// Rota de callback do OAuth2
 router.get('/oauth2callback', handleOAuth2Callback);
+router.get('/google', initiateGoogleAuth);
 
 module.exports = router;
