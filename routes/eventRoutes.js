@@ -1,29 +1,19 @@
 const express = require('express');
 const router = express.Router();
-const { createEvent } = require('../controllers/eventController');
+const eventController = require('../controllers/eventController'); // Certifique-se de que este caminho está correto
 
 // Exibir formulário de criação de evento
 router.get('/create-event-form', (req, res) => {
-    res.send(`
-        <form action="/events/create-event" method="POST">
-            <label for="event_name">Nome do Evento:</label>
-            <input type="text" id="event_name" name="event_name" required><br><br>
-
-            <label for="date">Data:</label>
-            <input type="date" id="date" name="date" required><br><br>
-
-            <label for="start_time">Hora de Início:</label>
-            <input type="time" id="start_time" name="start_time" required><br><br>
-
-            <label for="end_time">Hora de Término:</label>
-            <input type="time" id="end_time" name="end_time" required><br><br>
-
-            <button type="submit">Criar Evento</button>
-        </form>
-    `);
+    res.redirect('http://localhost:3001/create-event-form');
 });
 
-// Criar evento
-router.post('/create-event', createEvent);
+// Rota para criar um evento
+router.post('/create-event', eventController.createEvent);
+
+// Rota para obter todos os eventos
+router.get('/get-events', eventController.getEvents);
+
+// Rota para excluir um evento
+router.delete('/delete-event/:customers_id', eventController.deleteEvent);
 
 module.exports = router;
