@@ -5,8 +5,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const { oauth2Client, authUrl } = require('./config/oauth2');
 const eventRoutes = require('./routes/eventRoutes');
-const { handleOAuth2Callback, initiateGoogleAuth} = require('./controllers/authController');
-
+const { handleOAuth2Callback, initiateGoogleAuth } = require('./controllers/authController');
 
 const app = express();
 const port = 3000;
@@ -16,12 +15,9 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'views')));
 
+// Rota principal
 app.get('/', (req, res) => {
-    res.send(`
-        <h1>Bem-vindo!</h1>
-        <p>Faça login com o Google para sincronizar seu Google Calendar com o banco de dados.</p>
-        <a href="${authUrl}">Login com o Google</a>
-    `);
+    res.send('API de Eventos. Use as rotas disponíveis para gerenciar eventos.');
 });
 
 app.get('/google', initiateGoogleAuth);
