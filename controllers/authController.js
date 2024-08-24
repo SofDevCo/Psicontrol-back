@@ -1,6 +1,6 @@
 const { google } = require('googleapis');
 const { createEvent: saveEvent, eventExists } = require('../services/eventService');
-const { oauth2Client, authUrl} = require('../config/oauth2');
+const { oauth2Client, authUrl } = require('../config/oauth2');
 
 const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
@@ -21,11 +21,24 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
             const existingEvent = await eventExists(event.id);
 
             if (!existingEvent) {
+                let startDate = null, startTime = null, endTime = null;
+
+                // Verifica se o evento tem `dateTime` ou `date`
+                if (event.start && event.start.dateTime) {
+                    startDate = event.start.dateTime.split('T')[0];
+                    startTime = event.start.dateTime.split('T')[1].split(':').slice(0, 2).join(':');
+                    endTime = event.end.dateTime.split('T')[1].split(':').slice(0, 2).join(':');
+                } else if (event.start && event.start.date) {
+                    startDate = event.start.date;
+                    startTime = "00:00"; // Opcional: Definir horário de início como meia-noite
+                    endTime = "23:59";   // Opcional: Definir horário de término como 23:59
+                }
+
                 const newEvent = await saveEvent({
-                    event_name: event.summary,
-                    date: event.start.dateTime.split('T')[0],
-                    start_time: event.start.dateTime.split('T')[1].split(':')[0] + ':' + event.start.dateTime.split('T')[1].split(':')[1],
-                    end_time: event.end.dateTime.split('T')[1].split(':')[0] + ':' + event.end.dateTime.split('T')[1].split(':')[1],
+                    event_name: event.summary || 'Sem título',
+                    date: startDate,
+                    start_time: startTime,
+                    end_time: endTime,
                     google_event_id: event.id,
                 });
             }
