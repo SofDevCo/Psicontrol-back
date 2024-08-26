@@ -3,14 +3,9 @@ const { createEvent: saveEvent, deleteEventById } = require('../services/eventSe
 const { oauth2Client } = require('../config/oauth2');
 const { Evento } = require('../models/eventModel');
 
-// Função para autenticar o cliente OAuth2 antes de realizar a exclusão
 const authenticateClient = async () => {
     if (!oauth2Client.credentials || !oauth2Client.credentials.access_token) {
         try {
-            // Aqui, você deve buscar um token de atualização ou utilizar um fluxo de autenticação apropriado
-            // Dependendo de como você gerencia os tokens, isso pode incluir a obtenção de um novo token
-            // usando um refresh token ou outros métodos.
-            // Exemplo (assumindo que você tem um refresh token configurado):
             const tokens = await oauth2Client.refreshAccessToken();
             oauth2Client.setCredentials(tokens.credentials);
         } catch (error) {
@@ -118,7 +113,6 @@ exports.deleteEvent = async (req, res) => {
     }
 };
 
-// Função para buscar todos os eventos
 exports.getEvents = async (req, res) => {
     try {
         const events = await Evento.findAll();
