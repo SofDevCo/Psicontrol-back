@@ -1,5 +1,5 @@
 const { google } = require('googleapis');
-const { createEvent: saveEvent, eventExists, deleteEventByGoogleId } = require('../services/eventService');
+const { createEvent: saveEvent, eventExists, deleteEventByGoogleId, updateEvent } = require('../services/eventService');
 const { oauth2Client, authUrl } = require('../config/oauth2');
 const { Evento } = require('../models/eventModel');
 
@@ -9,9 +9,13 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
     oauth2Client.setCredentials({ access_token: accessToken });
 
     try {
+        const now = new Date();
+        const twoMonthsAgo = new Date();
+        twoMonthsAgo.setMonth(now.getMonth() - 2);
+
         const response = await calendar.events.list({
             calendarId: 'primary',
-            timeMin: (new Date()).toISOString(),
+            timeMin: twoMonthsAgo.toISOString(),
             singleEvents: true,
             orderBy: 'startTime',
         });
@@ -19,9 +23,13 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
         const events = response.data.items;
 
         for (const event of events) {
+            const eventStatus = event.status || 'confirmed'; // Define 'confirmed' como padrão
+            const updatedAt = new Date(event.updated || event.created); // Usa a data de atualização ou criação
+
             const existingEvent = await eventExists(event.id);
 
             if (!existingEvent) {
+                // Novo evento
                 let startDate = null, startTime = null, endTime = null;
 
                 if (event.start && event.start.dateTime) {
@@ -40,7 +48,22 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
                     start_time: startTime,
                     end_time: endTime,
                     google_event_id: event.id,
+                    status: eventStatus,
+                    updated_at: updatedAt
                 });
+            } else {
+                // Evento existente: verifica se há alterações
+                if (updatedAt > new Date(existingEvent.updated_at)) {
+                    await updateEvent({
+                        event_name: event.summary || 'Sem título',
+                        date: startDate,
+                        start_time: startTime,
+                        end_time: endTime,
+                        google_event_id: event.id,
+                        status: eventStatus,
+                        updated_at: updatedAt
+                    });
+                }
             }
         }
 
@@ -81,6 +104,7 @@ async function handleOAuth2Callback(req, res) {
     try {
         const { tokens } = await oauth2Client.getToken(code);
         oauth2Client.setCredentials(tokens);
+        console.log('token:', tokens);
         await syncGoogleCalendarWithDatabase(tokens.access_token);
         res.redirect('/events/create-event-form');
     } catch (error) {

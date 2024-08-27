@@ -47,3 +47,24 @@ exports.deleteEventByGoogleId = async (googleEventId) => {
         throw error;
     }
 };
+
+exports.saveEvent = async (eventData) => {
+    try {
+        console.log('Salvando evento:', eventData); // Adicione este log para depuração
+        return await Evento.create(eventData);
+    } catch (error) {
+        console.error('Erro ao criar evento:', error);
+        throw new Error('Erro ao criar evento.');
+    }
+};
+
+exports.updateEvent = async (eventData) => {
+    try {
+        await Evento.update(eventData, {
+            where: { google_event_id: eventData.google_event_id }
+        });
+    } catch (error) {
+        console.error('Erro ao atualizar evento:', error);
+        throw new Error('Erro ao atualizar evento.');
+    }
+};
