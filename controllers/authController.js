@@ -25,9 +25,8 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
         console.log('Eventos recebidos do Google Calendar:', events);
 
         for (const event of events) {
-            const eventStatus = event.status || 'confirmed'; // Define 'confirmed' como padrão
+            const eventStatus = event.status || 'confirmed'; 
 
-            // Use a data do evento no Google Calendar para a data do banco de dados
             let startDate = null, startTime = null, endTime = null;
 
             if (event.start && event.start.dateTime) {
@@ -56,7 +55,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
                 console.log('Criando novo evento no banco de dados...');
                 await saveEvent({
                     event_name: event.summary || 'Sem título',
-                    date: startDate, // Usa a data do evento
+                    date: startDate, 
                     start_time: startTime,
                     end_time: endTime,
                     google_event_id: event.id,
