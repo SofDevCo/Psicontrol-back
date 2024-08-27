@@ -1,5 +1,5 @@
 const { google } = require('googleapis');
-const { createEvent: saveEvent, eventExists, deleteEventByGoogleId } = require('../services/eventService');
+const { createEvent: saveEvent, eventExists, deleteEventByGoogleId, updateEvent } = require('../services/eventService');
 const { oauth2Client, authUrl } = require('../config/oauth2');
 const { Evento } = require('../models/eventModel');
 
@@ -9,41 +9,78 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
     oauth2Client.setCredentials({ access_token: accessToken });
 
     try {
+        const now = new Date();
+        const twoMonthsAgo = new Date();
+        twoMonthsAgo.setMonth(now.getMonth() - 2);
+
+        console.log('Fetching events from Google Calendar...');
         const response = await calendar.events.list({
             calendarId: 'primary',
-            timeMin: (new Date()).toISOString(),
+            timeMin: twoMonthsAgo.toISOString(),
             singleEvents: true,
             orderBy: 'startTime',
         });
 
         const events = response.data.items;
+        console.log('Eventos recebidos do Google Calendar:', events);
 
         for (const event of events) {
+            const eventStatus = event.status || 'confirmed'; 
+
+            let startDate = null, startTime = null, endTime = null;
+
+            if (event.start && event.start.dateTime) {
+                startDate = event.start.dateTime.split('T')[0];
+                startTime = event.start.dateTime.split('T')[1].split(':').slice(0, 2).join(':');
+                endTime = event.end.dateTime.split('T')[1].split(':').slice(0, 2).join(':');
+            } else if (event.start && event.start.date) {
+                startDate = event.start.date;
+                startTime = "00:00";
+                endTime = "23:59";
+            }
+
+            console.log('Processando evento:', {
+                event_id: event.id,
+                event_name: event.summary,
+                date: startDate,
+                start_time: startTime,
+                end_time: endTime,
+                status: eventStatus
+            });
+
             const existingEvent = await eventExists(event.id);
+            console.log('Evento existente no banco de dados:', existingEvent);
 
             if (!existingEvent) {
-                let startDate = null, startTime = null, endTime = null;
-
-                if (event.start && event.start.dateTime) {
-                    startDate = event.start.dateTime.split('T')[0];
-                    startTime = event.start.dateTime.split('T')[1].split(':').slice(0, 2).join(':');
-                    endTime = event.end.dateTime.split('T')[1].split(':').slice(0, 2).join(':');
-                } else if (event.start && event.start.date) {
-                    startDate = event.start.date;
-                    startTime = "00:00";
-                    endTime = "23:59";
-                }
-
+                console.log('Criando novo evento no banco de dados...');
                 await saveEvent({
                     event_name: event.summary || 'Sem título',
-                    date: startDate,
+                    date: startDate, 
                     start_time: startTime,
                     end_time: endTime,
                     google_event_id: event.id,
+                    status: eventStatus
                 });
+            } else {
+                const existingDate = existingEvent.date;
+                console.log('Data existente no banco de dados:', existingDate);
+                console.log('Data do evento Google Calendar:', startDate);
+
+                if (startDate !== existingDate || eventStatus !== existingEvent.status) {
+                    console.log('Atualizando evento existente no banco de dados...');
+                    await updateEvent({
+                        event_name: event.summary || 'Sem título',
+                        date: startDate,
+                        start_time: startTime,
+                        end_time: endTime,
+                        google_event_id: event.id,
+                        status: eventStatus
+                    });
+                }
             }
         }
 
+        console.log('Removendo eventos inexistentes...');
         await deleteNonexistentGoogleEvents(events);
 
     } catch (error) {
@@ -51,6 +88,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
         throw new Error('Erro ao sincronizar eventos.');
     }
 };
+
 
 const deleteNonexistentGoogleEvents = async (events) => {
     try {
@@ -81,6 +119,7 @@ async function handleOAuth2Callback(req, res) {
     try {
         const { tokens } = await oauth2Client.getToken(code);
         oauth2Client.setCredentials(tokens);
+        console.log('token:', tokens);
         await syncGoogleCalendarWithDatabase(tokens.access_token);
         res.redirect('/events/create-event-form');
     } catch (error) {
