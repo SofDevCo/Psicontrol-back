@@ -2,7 +2,6 @@ const { Sequelize } = require('sequelize');
 const { sequelize } = require('../config/database');
 const { Evento } = require('../models/eventModel');
 
-// Função para criar um evento
 exports.createEvent = async (event) => {
     try {
         return await Evento.create(event);
@@ -12,7 +11,6 @@ exports.createEvent = async (event) => {
     }
 };
 
-// Função para verificar se um evento existe no banco de dados
 exports.eventExists = async (googleEventId) => {
     try {
         return await Evento.findOne({ where: { google_event_id: googleEventId } });
@@ -22,7 +20,6 @@ exports.eventExists = async (googleEventId) => {
     }
 };
 
-// Função para deletar um evento pelo ID do cliente
 exports.deleteEventById = async (customers_id) => {
     try {
         const result = await Evento.destroy({
@@ -35,7 +32,6 @@ exports.deleteEventById = async (customers_id) => {
     }
 };
 
-// Função para deletar um evento pelo ID do Google Event
 exports.deleteEventByGoogleId = async (googleEventId) => {
     try {
         const result = await Evento.destroy({
@@ -47,3 +43,25 @@ exports.deleteEventByGoogleId = async (googleEventId) => {
         throw error;
     }
 };
+
+exports.saveEvent = async (eventData) => {
+    try {
+        console.log('Salvando evento:', eventData); 
+        return await Evento.create(eventData);
+    } catch (error) {
+        console.error('Erro ao criar evento:', error);
+        throw new Error('Erro ao criar evento.');
+    }
+};
+
+exports.updateEvent = async (eventData) => {
+    try {
+        console.log('Updating event:', eventData); 
+        await Evento.update(eventData, {
+            where: { google_event_id: eventData.google_event_id }
+        });
+    } catch (error) {
+        console.error('Erro ao atualizar evento:', error);
+        throw new Error('Erro ao atualizar evento.');
+    }
+}
