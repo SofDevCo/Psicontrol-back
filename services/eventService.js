@@ -25,6 +25,11 @@ exports.deleteEventById = async (customers_id) => {
         const result = await Evento.destroy({
             where: { customers_id }
         });
+        if (result === 0) {
+            console.log('Nenhum evento encontrado para deletar com customers_id:', customers_id);
+        } else {
+            console.log('Evento deletado com sucesso com customers_id:', customers_id);
+        }
         return result;
     } catch (error) {
         console.error('Erro ao excluir evento:', error);
@@ -37,12 +42,17 @@ exports.deleteEventByGoogleId = async (googleEventId) => {
         const result = await Evento.destroy({
             where: { google_event_id: googleEventId }
         });
-        return result;
+        if (result === 0) {
+            console.log('Nenhum evento encontrado para deletar com google_event_id:', googleEventId);
+        } else {
+            console.log('Evento deletado com sucesso com google_event_id:', googleEventId);
+        }
     } catch (error) {
-        console.error('Erro ao deletar evento pelo Google Event ID:', error);
-        throw error;
+        console.error('Erro ao deletar evento do banco de dados:', error);
+        throw new Error('Erro ao deletar evento do banco de dados.');
     }
 };
+
 
 exports.saveEvent = async (eventData) => {
     try {
@@ -56,10 +66,15 @@ exports.saveEvent = async (eventData) => {
 
 exports.updateEvent = async (eventData) => {
     try {
-        console.log('Atualizando evento no banco de dados:', eventData);
-        await Evento.update(eventData, {
+        console.log('Atualizando evento:', eventData); 
+        const [affectedRows] = await Evento.update(eventData, {
             where: { google_event_id: eventData.google_event_id }
         });
+        if (affectedRows === 0) {
+            console.log('Nenhum evento encontrado para atualizar com google_event_id:', eventData.google_event_id);
+        } else {
+            console.log('Evento atualizado com sucesso com google_event_id:', eventData.google_event_id);
+        }
     } catch (error) {
         console.error('Erro ao atualizar evento:', error);
         throw new Error('Erro ao atualizar evento.');
