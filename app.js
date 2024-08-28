@@ -15,7 +15,6 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'views')));
 
-// Rota principal
 app.get('/', (req, res) => {
     res.send('API de Eventos. Use as rotas disponíveis para gerenciar eventos.');
 });
