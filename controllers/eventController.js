@@ -67,7 +67,7 @@ exports.createEvent = async (req, res) => {
         const event = req.body;
 
         if (!event || !event.event_name || !event.date || !event.start_time || !event.end_time) {
-            return res.status(400).send('Dados inválidos.');
+            return res.status(400).json({ message: 'Dados inválidos.' });
         }
 
         const googleEventId = await createEventInGoogleCalendar(event);
@@ -77,10 +77,11 @@ exports.createEvent = async (req, res) => {
             google_event_id: googleEventId,
         });
 
-        res.send('Evento criado com sucesso.');
+        // Envie uma resposta JSON em vez de uma simples mensagem
+        res.status(201).json({ message: 'Evento criado com sucesso.', eventId: googleEventId });
     } catch (error) {
         console.error('Erro ao criar evento:', error);
-        res.status(500).send(error.message || 'Erro interno do servidor.');
+        res.status(500).json({ message: error.message || 'Erro interno do servidor.' });
     }
 };
 

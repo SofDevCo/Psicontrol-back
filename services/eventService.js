@@ -1,3 +1,5 @@
+const { Sequelize } = require('sequelize');
+const { sequelize } = require('../config/database');
 const { Evento } = require('../models/eventModel');
 
 // Função para criar um evento

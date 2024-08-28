@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const eventController = require('../controllers/eventController'); // Certifique-se de que este caminho está correto
+const eventController = require('../controllers/eventController');
 
-// Exibir formulário de criação de evento
+// Exibir formulário de criação de evento (caso esteja usando no front-end)
 router.get('/create-event-form', (req, res) => {
     res.redirect('http://localhost:3001/create-event-form');
 });
