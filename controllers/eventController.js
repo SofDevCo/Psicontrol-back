@@ -1,5 +1,5 @@
 const { google } = require('googleapis');
-const { createEvent: saveEvent, deleteEventById } = require('../services/eventService');
+const { createEvent: saveEvent, deleteEventByGoogleId } = require('../services/eventService');
 const { oauth2Client } = require('../config/oauth2');
 const { Evento } = require('../models/eventModel');
 
@@ -85,12 +85,17 @@ exports.createEvent = async (req, res) => {
 };
 
 exports.deleteEvent = async (req, res) => {
-    const { customers_id } = req.params;
+    const { google_event_id } = req.params;
 
-    console.log(`Tentando deletar evento com customers_id: ${customers_id}`);
+    console.log(`Tentando deletar evento com google_event_id: ${google_event_id}`);
 
     try {
-        const event = await Evento.findOne({ where: { customers_id } });
+        if (!google_event_id) {
+            return res.status(400).send('O parâmetro google_event_id é necessário.');
+        }
+
+        // Verificar se o evento existe no banco de dados
+        const event = await Evento.findOne({ where: { google_event_id } });
         if (!event) {
             console.log('Evento não encontrado');
             return res.status(404).send('Evento não encontrado');
@@ -98,18 +103,22 @@ exports.deleteEvent = async (req, res) => {
 
         console.log('Evento encontrado:', event);
 
+        // Deletar o evento do Google Calendar
         if (event.google_event_id) {
+            console.log('Deletando evento do Google Calendar...');
             await deleteEventFromGoogleCalendar(event.google_event_id);
         } else {
             console.log('Evento não tem um google_event_id válido, pulando exclusão do Google Calendar.');
         }
 
-        await deleteEventById(customers_id);
+        // Deletar o evento do banco de dados
+        console.log('Deletando evento do banco de dados...');
+        await deleteEventByGoogleId(google_event_id);
 
         res.send('Evento deletado com sucesso.');
     } catch (error) {
         console.error('Erro ao deletar evento:', error);
-        res.status(500).send(error.message || 'Erro interno do servidor.');
+        res.status(500).send(`Erro interno do servidor: ${error.message}`);
     }
 };
 

@@ -10,7 +10,12 @@ const { handleOAuth2Callback, initiateGoogleAuth } = require('./controllers/auth
 const app = express();
 const port = 3000;
 
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:3001', // Substitua pela URL do seu frontend
+    credentials: true // Permite o envio de cookies e headers de autorização
+}));
+
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'views')));
