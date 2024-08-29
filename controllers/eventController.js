@@ -1,5 +1,6 @@
 const { google } = require('googleapis');
 const { createEvent: saveEvent, deleteEventByGoogleId } = require('../services/eventService');
+const { syncGoogleCalendarWithDatabase } = require('../controllers/authController');
 const { oauth2Client } = require('../config/oauth2');
 const { Evento } = require('../models/eventModel');
 
@@ -127,5 +128,21 @@ exports.getEvents = async (req, res) => {
     } catch (error) {
         console.error('Erro ao buscar eventos:', error);
         res.status(500).send('Erro interno do servidor.');
+    }
+};
+
+exports.syncCalendar = async (req, res) => {
+    try {
+        const tokens = oauth2Client.credentials;
+        if (!tokens || !tokens.access_token) {
+            return res.status(401).send('Token de autenticação não encontrado. Faça login novamente.');
+        }
+
+        await syncGoogleCalendarWithDatabase(tokens.access_token);
+
+        res.json({ message: 'Calendário sincronizado com sucesso.' });
+    } catch (error) {
+        console.error('Erro ao sincronizar o calendário:', error);
+        res.status(500).send('Erro ao sincronizar o calendário.');
     }
 };
