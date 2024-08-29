@@ -7,19 +7,22 @@ const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
 const syncGoogleCalendarWithDatabase = async (accessToken) => {
     oauth2Client.setCredentials({ access_token: accessToken });
+
     try {
         const now = new Date();
         const twoMonthsAgo = new Date();
         twoMonthsAgo.setMonth(now.getMonth() - 2);
-        // console.log('Fetching events from Google Calendar...');
+
+        console.log('Fetching events from Google Calendar...');
         const response = await calendar.events.list({
             calendarId: 'primary',
             timeMin: twoMonthsAgo.toISOString(),
             singleEvents: true,
             orderBy: 'startTime',
         });
+
         const events = response.data.items;
-        // console.log('Eventos recebidos do Google Calendar:', events);
+        console.log('Eventos recebidos do Google Calendar:', events);
 
         for (const event of events) {
             const eventStatus = event.status || 'confirmed'; 
@@ -35,16 +38,19 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
                 startTime = "00:00";
                 endTime = "23:59";
             }
-            // console.log('Processando evento:', {
-            //     event_id: event.id,
-            //     event_name: event.summary,
-            //     date: startDate,
-            //     start_time: startTime,
-            //     end_time: endTime,
-            //     status: eventStatus
-            // });
+
+            console.log('Processando evento:', {
+                event_id: event.id,
+                event_name: event.summary,
+                date: startDate,
+                start_time: startTime,
+                end_time: endTime,
+                status: eventStatus
+            });
+
             const existingEvent = await eventExists(event.id);
-            // console.log('Evento existente no banco de dados:', existingEvent);
+            console.log('Evento existente no banco de dados:', existingEvent);
+
             if (!existingEvent) {
                 console.log('Criando novo evento no banco de dados...');
                 await saveEvent({
@@ -57,9 +63,17 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
                 });
             } else {
                 const existingDate = existingEvent.date;
-                // console.log('Data existente no banco de dados:', existingDate);
-                // console.log('Data do evento Google Calendar:', startDate);
-                if (startDate !== existingDate || eventStatus !== existingEvent.status) {
+                const existingStartTime = existingEvent.start_time;
+                const existingEndTime = existingEvent.end_time;
+                const existingStatus = existingEvent.status;
+                const existingName = existingEvent.event_name;
+
+                if (startDate !== existingDate || 
+                    startTime !== existingStartTime || 
+                    endTime !== existingEndTime || 
+                    eventStatus !== existingStatus || 
+                    event.summary !== existingName) {
+                    
                     console.log('Atualizando evento existente no banco de dados...');
                     await updateEvent({
                         event_name: event.summary || 'Sem título',
@@ -72,13 +86,16 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
                 }
             }
         }
-        // console.log('Removendo eventos inexistentes...');
+
+        console.log('Removendo eventos inexistentes...');
         await deleteNonexistentGoogleEvents(events);
+
     } catch (error) {
         console.error('Erro ao sincronizar eventos com o banco de dados:', error);
         throw new Error('Erro ao sincronizar eventos.');
     }
 };
+
 const deleteNonexistentGoogleEvents = async (events) => {
     try {
         const googleEventIds = events.map(event => event.id);
