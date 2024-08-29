@@ -7,6 +7,7 @@ router.get('/create-event-form', (req, res) => {
 });
 
 router.post('/create-event', eventController.createEvent);
+router.post('/sync-calendar', eventController.syncCalendar);
 router.get('/get-events', eventController.getEvents);
 router.delete('/delete-event/:google_event_id', eventController.deleteEvent);
 
