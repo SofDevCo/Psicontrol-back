@@ -1,5 +1,6 @@
 const { google } = require('googleapis');
 const { createEvent: saveEvent, deleteEventByGoogleId } = require('../services/eventService');
+const { syncGoogleCalendarWithDatabase } = require('../controllers/authController');
 const { oauth2Client } = require('../config/oauth2');
 const { Evento } = require('../models/eventModel');
 
@@ -186,5 +187,80 @@ exports.syncCalendar = async (req, res) => {
         res.status(200).json({ message: 'Sincronização concluída com sucesso.' });
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+};
+
+const syncGoogleCalendarWithDatabase = async () => {
+    try {
+        await authenticateClient();
+
+        const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+        // Obtém eventos a partir de uma data (exemplo: 2 meses atrás)
+        const now = new Date();
+        const twoMonthsAgo = new Date(now.setMonth(now.getMonth() - 2)).toISOString();
+
+        const response = await calendar.events.list({
+            calendarId: 'primary',
+            timeMin: twoMonthsAgo,
+            singleEvents: true,
+            orderBy: 'startTime',
+        });
+
+        const googleEvents = response.data.items;
+
+        for (const googleEvent of googleEvents) {
+            const existingEvent = await Evento.findOne({ where: { google_event_id: googleEvent.id } });
+
+            if (existingEvent) {
+                // Verificar se o evento foi alterado no Google Calendar
+                if (existingEvent.event_name !== googleEvent.summary || existingEvent.date !== googleEvent.start.dateTime) {
+                    // Atualiza o evento no banco de dados
+                    await Evento.update({
+                        event_name: googleEvent.summary,
+                        date: googleEvent.start.dateTime,
+                    }, {
+                        where: { google_event_id: googleEvent.id }
+                    });
+                }
+            } else {
+                // Se o evento não existe no banco de dados, cria um novo
+                await saveEvent({
+                    event_name: googleEvent.summary,
+                    date: googleEvent.start.dateTime,
+                    google_event_id: googleEvent.id,
+                });
+            }
+        }
+
+        console.log('Sincronização completa com o Google Calendar.');
+    } catch (error) {
+        console.error('Erro ao sincronizar com o Google Calendar:', error);
+        throw new Error('Erro ao sincronizar com o Google Calendar.');
+    }
+};
+
+exports.syncCalendar = async (req, res) => {
+    try {
+        await syncGoogleCalendarWithDatabase();
+        res.status(200).json({ message: 'Sincronização concluída com sucesso.' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.syncCalendar = async (req, res) => {
+    try {
+        const tokens = oauth2Client.credentials;
+        if (!tokens || !tokens.access_token) {
+            return res.status(401).send('Token de autenticação não encontrado. Faça login novamente.');
+        }
+
+        await syncGoogleCalendarWithDatabase(tokens.access_token);
+
+        res.json({ message: 'Calendário sincronizado com sucesso.' });
+    } catch (error) {
+        console.error('Erro ao sincronizar o calendário:', error);
+        res.status(500).send('Erro ao sincronizar o calendário.');
     }
 };
