@@ -5,7 +5,7 @@ const { Evento } = require('../models/eventModel');
 
 const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
-const syncGoogleCalendarWithDatabase = async (accessToken) => {
+const syncGoogleCalendarWithDatabase = async (accessToken, calendarId) => {
     oauth2Client.setCredentials({ access_token: accessToken });
 
     try {

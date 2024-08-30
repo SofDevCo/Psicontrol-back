@@ -78,7 +78,6 @@ exports.createEvent = async (req, res) => {
             google_event_id: googleEventId,
         });
 
-        // Envie uma resposta JSON em vez de uma simples mensagem
         res.status(201).json({ message: 'Evento criado com sucesso.', eventId: googleEventId });
     } catch (error) {
         console.error('Erro ao criar evento:', error);
@@ -132,17 +131,33 @@ exports.getEvents = async (req, res) => {
 };
 
 exports.syncCalendar = async (req, res) => {
+    const { calendarId } = req.params;
+
     try {
         const tokens = oauth2Client.credentials;
         if (!tokens || !tokens.access_token) {
             return res.status(401).send('Token de autenticação não encontrado. Faça login novamente.');
         }
 
-        await syncGoogleCalendarWithDatabase(tokens.access_token);
+        await syncGoogleCalendarWithDatabase(tokens.access_token, calendarId);
 
         res.json({ message: 'Calendário sincronizado com sucesso.' });
     } catch (error) {
         console.error('Erro ao sincronizar o calendário:', error);
         res.status(500).send('Erro ao sincronizar o calendário.');
+    }
+};
+
+exports.listCalendars = async (req, res) => {
+    try {
+        oauth2Client.setCredentials(oauth2Client.credentials);
+
+        const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+        const response = await calendar.calendarList.list();
+
+        res.json(response.data.items);
+    } catch (error) {
+        console.error('Erro ao listar os calendários:', error);
+        res.status(500).send('Erro ao listar os calendários.');
     }
 };
