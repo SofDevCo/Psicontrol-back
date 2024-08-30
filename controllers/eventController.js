@@ -1,6 +1,6 @@
 const { google } = require('googleapis');
 const { createEvent: saveEvent, deleteEventByGoogleId } = require('../services/eventService');
-const { syncGoogleCalendarWithDatabase } = require('../controllers/authController');
+const { syncGoogleCalendarWithDatabase , fetchGoogleCalendarEvents} = require('../controllers/authController');
 const { oauth2Client } = require('../config/oauth2');
 const { Evento } = require('../models/eventModel');
 
@@ -159,5 +159,24 @@ exports.listCalendars = async (req, res) => {
     } catch (error) {
         console.error('Erro ao listar os calendários:', error);
         res.status(500).send('Erro ao listar os calendários.');
+    }
+};
+
+exports.getEventsByCalendar = async (req, res) => {
+    const { calendarId } = req.params; 
+
+    try {
+        const tokens = oauth2Client.credentials;
+        if (!tokens || !tokens.access_token) {
+            return res.status(401).send('Token de autenticação não encontrado. Faça login novamente.');
+        }
+
+        const events = await fetchGoogleCalendarEvents(tokens.access_token, calendarId); // Usa a função existente
+        console.log('Eventos recebidos do Google Calendar:', events);
+
+        res.json(events);
+    } catch (error) {
+        console.error('Erro ao buscar eventos do calendário:', error);
+        res.status(500).send('Erro ao buscar eventos do calendário.');
     }
 };

@@ -5,27 +5,31 @@ const { Evento } = require('../models/eventModel');
 
 const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
-const syncGoogleCalendarWithDatabase = async (accessToken, calendarId) => {
+const fetchGoogleCalendarEvents = async (accessToken, calendarId = 'primary') => {
     oauth2Client.setCredentials({ access_token: accessToken });
 
+    const now = new Date();
+    const twoMonthsAgo = new Date();
+    twoMonthsAgo.setMonth(now.getMonth() - 2);
+
+    console.log('Fetching events from Google Calendar...');
+    const response = await calendar.events.list({
+        calendarId: calendarId, 
+        timeMin: twoMonthsAgo.toISOString(),
+        singleEvents: true,
+        orderBy: 'startTime',
+    });
+
+    return response.data.items;
+};
+
+const syncGoogleCalendarWithDatabase = async (accessToken, calendarId = 'primary') => {
     try {
-        const now = new Date();
-        const twoMonthsAgo = new Date();
-        twoMonthsAgo.setMonth(now.getMonth() - 2);
-
-        console.log('Fetching events from Google Calendar...');
-        const response = await calendar.events.list({
-            calendarId: 'primary',
-            timeMin: twoMonthsAgo.toISOString(),
-            singleEvents: true,
-            orderBy: 'startTime',
-        });
-
-        const events = response.data.items;
+        const events = await fetchGoogleCalendarEvents(accessToken, calendarId); 
         console.log('Eventos recebidos do Google Calendar:', events);
 
         for (const event of events) {
-            const eventStatus = event.status || 'confirmed'; 
+            const eventStatus = event.status || 'confirmed';
 
             let startDate = null, startTime = null, endTime = null;
 
@@ -55,7 +59,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken, calendarId) => {
                 console.log('Criando novo evento no banco de dados...');
                 await saveEvent({
                     event_name: event.summary || 'Sem título',
-                    date: startDate, 
+                    date: startDate,
                     start_time: startTime,
                     end_time: endTime,
                     google_event_id: event.id,
@@ -68,12 +72,12 @@ const syncGoogleCalendarWithDatabase = async (accessToken, calendarId) => {
                 const existingStatus = existingEvent.status;
                 const existingName = existingEvent.event_name;
 
-                if (startDate !== existingDate || 
-                    startTime !== existingStartTime || 
-                    endTime !== existingEndTime || 
-                    eventStatus !== existingStatus || 
+                if (startDate !== existingDate ||
+                    startTime !== existingStartTime ||
+                    endTime !== existingEndTime ||
+                    eventStatus !== existingStatus ||
                     event.summary !== existingName) {
-                    
+
                     console.log('Atualizando evento existente no banco de dados...');
                     await updateEvent({
                         event_name: event.summary || 'Sem título',
@@ -129,4 +133,4 @@ async function handleOAuth2Callback(req, res) {
         res.status(500).send('Erro ao concluir a autenticação.');
     }
 }
-module.exports = { handleOAuth2Callback, initiateGoogleAuth, syncGoogleCalendarWithDatabase };
+module.exports = { handleOAuth2Callback, initiateGoogleAuth, syncGoogleCalendarWithDatabase, fetchGoogleCalendarEvents };
