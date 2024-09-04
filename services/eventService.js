@@ -1,5 +1,3 @@
-const { Sequelize } = require('sequelize');
-const { sequelize } = require('../config/database');
 const { Evento } = require('../models/eventModel');
 
 exports.createEvent = async (event) => {
@@ -37,22 +35,23 @@ exports.deleteEventById = async (customers_id) => {
     }
 };
 
-exports.deleteEventByGoogleId = async (googleEventId) => {
+exports.cancelEventByGoogleId = async (googleEventId) => {
     try {
-        const result = await Evento.destroy({
-            where: { google_event_id: googleEventId }
-        });
-        if (result === 0) {
-            console.log('Nenhum evento encontrado para deletar com google_event_id:', googleEventId);
+        const result = await Evento.update(
+            { status: 'cancelado' },
+            { where: { google_event_id: googleEventId } }
+        );
+
+        if (result[0] === 0) {
+            console.log('Nenhum evento encontrado para cancelar com google_event_id:', googleEventId);
         } else {
-            console.log('Evento deletado com sucesso com google_event_id:', googleEventId);
+            console.log('Evento cancelado com sucesso com google_event_id:', googleEventId);
         }
     } catch (error) {
-        console.error('Erro ao deletar evento do banco de dados:', error);
-        throw new Error('Erro ao deletar evento do banco de dados.');
+        console.error('Erro ao cancelar evento no banco de dados:', error);
+        throw new Error('Erro ao cancelar evento no banco de dados.');
     }
 };
-
 
 exports.saveEvent = async (eventData) => {
     try {
