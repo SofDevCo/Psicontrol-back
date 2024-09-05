@@ -26,9 +26,9 @@ const deleteEventFromGoogleCalendar = async (calendarId, googleEventId) => {
             throw new Error('O ID do evento não pode estar vazio.');
         }
 
-        console.log('Tentando deletar evento com ID:', googleEventId);
+        //console.log('Tentando deletar evento com ID:', googleEventId);
         await calendar.events.delete({
-            calendar_id: calendarId, 
+            calendarId: calendarId, 
             eventId: googleEventId,
         });
 
@@ -68,6 +68,7 @@ exports.createEvent = async (req, res) => {
 };
 
 exports.deleteEvent = async (req, res) => {
+    console.log("Delete request params:", req.params);
     const { google_event_id, calendarId } = req.params;
 
     try {

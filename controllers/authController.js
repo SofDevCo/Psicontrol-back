@@ -10,7 +10,7 @@ const fetchGoogleCalendars = async (accessToken) => {
     oauth2Client.setCredentials({ access_token: accessToken });
 
     try {
-        console.log('Fetching calendars from Google Calendar...');
+        // console.log('Fetching calendars from Google Calendar...');
         const response = await calendar.calendarList.list();
         return response.data.items;
     } catch (error) {
@@ -29,7 +29,7 @@ const fetchGoogleCalendarEvents = async (accessToken, calendarId) => {
     twoMonthsBefore.setMonth(now.getMonth() - 2);
     twoMonthsAfter.setMonth(now.getMonth() + 2);
 
-    console.log('Fetching events from Google Calendar...');
+    // console.log('Fetching events from Google Calendar...');
     const response = await calendar.events.list({
         calendarId: calendarId,
         timeMin: twoMonthsBefore.toISOString(),

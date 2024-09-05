@@ -12,6 +12,6 @@ router.post('/sync-calendar/:calendarId', eventController.syncCalendar);
 router.get('/get-events/:calendarId', eventController.getEventsByCalendar);
 router.get('/get-events', eventController.getEvents);
 router.get('/calendars', eventController.listCalendars);
-router.delete('/delete-event/:google_event_id', eventController.deleteEvent);
+router.delete('/delete-event/:google_event_id/:calendarId', eventController.deleteEvent);
 
 module.exports = router;
