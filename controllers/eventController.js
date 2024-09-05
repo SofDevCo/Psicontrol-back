@@ -1,6 +1,6 @@
 const { google } = require('googleapis');
-const { createEvent: saveEvent, updateEvent, eventExists, deleteEventByGoogleId, cancelEventByGoogleId } = require('../services/eventService');
-const { syncGoogleCalendarWithDatabase, fetchGoogleCalendarEvents } = require('./authController');
+const { createEvent: saveEvent, cancelEventByGoogleId } = require('../services/eventService');
+const { syncGoogleCalendarWithDatabase} = require('./authController');
 const { oauth2Client } = require('../config/oauth2');
 const { Evento } = require('../models/eventModel');
 
@@ -13,6 +13,31 @@ const authenticateClient = async () => {
             console.error('Erro ao autenticar o cliente OAuth2:', error);
             throw new Error('Erro ao autenticar o cliente OAuth2.');
         }
+    }
+};
+
+const createEventInGoogleCalendar = async (event, calendarId) => {
+    try {
+        const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+        const response = await calendar.events.insert({
+            calendarId: calendarId, 
+            resource: {
+                summary: event.event_name,
+                description: `Evento criado`,
+                start: {
+                    dateTime: `${event.date}T${event.start_time}:00`,
+                    timeZone: 'America/Sao_Paulo',
+                },
+                end: {
+                    dateTime: `${event.date}T${event.end_time}:00`,
+                    timeZone: 'America/Sao_Paulo',
+                },
+            },
+        });
+        return response.data.id;
+    } catch (error) {
+        console.error('Erro ao criar evento no Google Calendar:', error);
+        throw new Error('Erro ao criar evento no Google Calendar.');
     }
 };
 
@@ -44,28 +69,31 @@ const deleteEventFromGoogleCalendar = async (calendarId, googleEventId) => {
     }
 };
 
-exports.createEvent = async (req, res) => { 
+exports.createEvent = async (req, res) => {
     try {
-        const { event, calendarId } = req.body;
-
-        if (!event || !event.event_name || !event.date || !event.start_time || !event.end_time || !event.calendar_id) {
-            return res.status(400).json({ message: 'Dados inválidos.' });
+        const event = req.body;
+        if (!event || !event.event_name || !event.date || !event.start_time || !event.end_time || !event.calendarId) {
+            return res.status(400).send('Dados inválidos.');
         }
 
-        const googleEventId = await createEventInGoogleCalendar(event, calendarId);
-
+        const googleEventId = await createEventInGoogleCalendar(event, event.calendarId);
+        
         await saveEvent({
             ...event,
             google_event_id: googleEventId,
-            calendar_id: calendarId
         });
 
-        res.status(201).json({ message: 'Evento criado com sucesso.', eventId: googleEventId });
+        res.send('Evento criado com sucesso.');
     } catch (error) {
         console.error('Erro ao criar evento:', error);
-        res.status(500).json({ message: error.message || 'Erro interno do servidor.' });
+        if (error.message) {
+            res.status(500).send(error.message);
+        } else {
+            res.status(500).send('Erro interno do servidor.');
+        }
     }
 };
+
 
 exports.deleteEvent = async (req, res) => {
     console.log("Delete request params:", req.params);
@@ -169,4 +197,3 @@ exports.getEventsByCalendar = async (req, res) => {
         res.status(500).json({ error: 'Erro ao buscar eventos.' });
     }
 };
-

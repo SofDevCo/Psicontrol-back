@@ -13,7 +13,7 @@ exports.eventExists = async (googleEventId) => {
     try {
         return await Evento.findOne({ where: { google_event_id: googleEventId } });
     } catch (error) {
-        console.error('Erro ao verificar a existência do evento:', error);
+        console.error('Erro ao verificar a existÃªncia do evento:', error);
         throw error;
     }
 };
