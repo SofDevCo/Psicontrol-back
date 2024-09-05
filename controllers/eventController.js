@@ -44,7 +44,7 @@ const deleteEventFromGoogleCalendar = async (calendarId, googleEventId) => {
     }
 };
 
-exports.createEvent = async (req, res) => {
+exports.createEvent = async (req, res) => { 
     try {
         const { event, calendarId } = req.body;
 
@@ -97,7 +97,7 @@ const checkEventExists = async (googleEventId, calendarId) => {
         const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
         const event = await calendar.events.get({
-            calendar_id: calendarId,  
+            calendarId: calendarId,  
             eventId: googleEventId,
         });
 
@@ -157,6 +157,8 @@ exports.listCalendars = async (req, res) => {
 exports.getEventsByCalendar = async (req, res) => {
     try {
         const { calendarId } = req.params;
+        console.log('calendarId', calendarId);
+
         const events = await Evento.findAll({
             where: { calendar_id: calendarId }
         });

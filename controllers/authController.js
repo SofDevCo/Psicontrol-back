@@ -1,10 +1,9 @@
 const { google } = require('googleapis');
-const { createEvent: saveEvent, eventExists, cancelEventByGoogleId, updateEvent } = require('../services/eventService');
-const { oauth2Client, authUrl } = require('../config/oauth2');
 const { Evento } = require('../models/eventModel');
 const { Calendar } = require('../models/calendarModel');
 const { listCalendars } = require('../services/calendarService');
 
+const { oauth2Client, authUrl } = require('../config/oauth2');
 const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
 const fetchGoogleCalendars = async (accessToken) => {
@@ -24,19 +23,30 @@ const fetchGoogleCalendarEvents = async (accessToken, calendarId) => {
     oauth2Client.setCredentials({ access_token: accessToken });
 
     const now = new Date();
-    const twoMonthsAgo = new Date();
-    twoMonthsAgo.setMonth(now.getMonth() - 2);
+    const twoMonthsBefore = new Date();
+    const twoMonthsAfter = new Date();
+
+    twoMonthsBefore.setMonth(now.getMonth() - 2);
+    twoMonthsAfter.setMonth(now.getMonth() + 2);
 
     console.log('Fetching events from Google Calendar...');
     const response = await calendar.events.list({
-        calendarId: calendarId, 
-        timeMin: twoMonthsAgo.toISOString(),
+        calendarId: calendarId,
+        timeMin: twoMonthsBefore.toISOString(),
+        timeMax: twoMonthsAfter.toISOString(),
         singleEvents: true,
         orderBy: 'startTime',
     });
 
-    return response.data.items;
+    return response.data.items.map(event => ({
+        ...event,
+        start: {
+            ...event.start,
+            dateTime: event.start.dateTime ? new Date(event.start.dateTime).toISOString() : null
+        }
+    }));
 };
+
 
 const syncGoogleCalendarWithDatabase = async (accessToken) => {
     try {
@@ -60,23 +70,40 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
             for (const event of events) {
                 const eventExists = await Evento.findOne({ where: { google_event_id: event.id } });
 
+                let  startDate = null, startTime = null, endTime = null;
+                
+                if (event.start && event.start.dateTime) {
+                    startDate = event.start.dateTime.split('T')[0];
+                    startTime = event.start.dateTime.split('T')[1].split(':').slice(0, 2).join(':');
+                    endTime = event.end.dateTime.split('T')[1].split(':').slice(0, 2).join(':');
+                } else if (event.start && event.start.date) {
+                    startDate = event.start.date;
+                    startTime = "00:00";
+                    endTime = "23:59";
+                }
+
                 if (eventExists) {
                     await Evento.update({
                         event_name: event.summary,
-                        date: event.start.dateTime,
+                        date: startDate,
                         status: event.status,
-                        calendar_id: calendarId
+                        calendar_id: calendarId,
+                        start_time: startTime,
+                        end_time: endTime
                     }, { where: { google_event_id: event.id } });
                 } else {
                     await Evento.create({
                         event_name: event.summary,
-                        date: event.start.dateTime,
+                        date: startDate,
                         google_event_id: event.id,
                         status: event.status,
-                        calendar_id: calendarId
+                        calendar_id: calendarId,
+                        start_time: startTime,
+                        end_time: endTime
                     });
                 }
             }
+            await deleteNonexistentGoogleEvents(events, calendarId);
         }
     } catch (error) {
         console.error('Erro ao sincronizar eventos com o banco de dados:', error);
@@ -87,7 +114,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
 const deleteNonexistentGoogleEvents = async (events, calendarId) => {
     try {
         const googleEventIds = events.map(event => event.id);
-        const allDbEvents = await Evento.findAll({ where: { calendar_id: calendarId } }); 
+        const allDbEvents = await Evento.findAll({ where: { calendar_id: calendarId } });
 
         for (const dbEvent of allDbEvents) {
             if (!googleEventIds.includes(dbEvent.google_event_id)) {
