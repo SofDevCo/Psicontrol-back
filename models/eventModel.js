@@ -41,6 +41,4 @@ const Evento = sequelize.define('Evento', {
     timestamps: false,
 });
 
-Evento.belongsTo(Calendar, { foreignKey: 'calendar_id' });
-
 module.exports = { Evento };
