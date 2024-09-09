@@ -12,11 +12,12 @@ const User = sequelize.define('User', {
         allowNull: false,
     },
     user_cpf: {
-        type: DataTypes.STRING(11)
+        type: DataTypes.STRING(11),
+        allowNull: true,
     },
     user_cnpj:{
         type: DataTypes.STRING(14),
-        allowNull: false,
+        allowNull: true,
     },
     crp_number: {
         type: DataTypes.STRING(15),
@@ -25,17 +26,21 @@ const User = sequelize.define('User', {
     user_phone: {
         type: DataTypes.STRING(15),
         allowNull: true,
-      },
-      user_email: {
+    },
+    user_email: {
         type: DataTypes.STRING(255),
         allowNull: false,
-      },
-      acess_token: {
-        type: DataTypes.STRING,
+    },
+    access_token: {
+        type: DataTypes.STRING(255),
         allowNull: true,
-    }
+    },
+    refresh_token:{
+        type: DataTypes.STRING(255),
+        allowNull: true,
+    },
 }, {
-  tableName: 'Users',
+  tableName: 'users',
   timestamps: false,
 });
 

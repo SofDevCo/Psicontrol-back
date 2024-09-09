@@ -1,29 +1,29 @@
-const {User} = require('../models/userModel');
+const {User} = require('../models');
 
-const saveAcessToken = async(email, acessToken) => {
+const saveTokens = async (name, email, accessToken, refreshToken) => {
+    if (!email) {
+        throw new Error('O email não foi fornecido.');
+    }
+
     try {
-        await User.update(
-            {acces_token: acessToken},
-            {where: { user_email: email}}
-        );
-        console.log(`ACess token atualizado para o usuário com email: ${email}`);
-    }catch(error){
-        console.error('Erro ao salvar o acess token:',error);
-    }
-};
-const getAccessToken = async(email)=>{
-    try{
-        const user = await User.findOne({where:{user_email:email}});
-        if(user){
-            return user.access_token;
+        let user = await User.findOne({ where: { user_email: email } });
+
+        if (!user) {
+            user = await User.create({
+                user_name: name, 
+                user_email: email,
+                access_token: accessToken,
+                refresh_token: refreshToken,
+            });
+        } else {
+            user.access_token = accessToken;
+            user.refresh_token = refreshToken;
+            await user.save();
         }
-        return null;
-    }catch(error){
-        console.error('Erro ao aobte o acess token:', error)
+    } catch (error) {
+        console.error('Erro ao salvar tokens no banco de dados:', error);
+        throw new Error('Erro ao salvar tokens.');
     }
 };
 
-module.exports = {
-    saveAcessToken,
-    getAccessToken,
-}
+module.exports = { saveTokens };
