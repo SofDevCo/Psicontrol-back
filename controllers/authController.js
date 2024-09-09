@@ -4,6 +4,7 @@ const { Calendar } = require('../models/calendarModel');
 const { listCalendars } = require('../services/calendarService');
 
 const { oauth2Client, authUrl } = require('../config/oauth2');
+const { saveTokens } = require('./tokenController');
 const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
 const fetchGoogleCalendars = async (accessToken) => {
@@ -139,13 +140,22 @@ async function handleOAuth2Callback(req, res) {
     }
     try {
         const { tokens } = await oauth2Client.getToken(code);
-        oauth2Client.setCredentials(tokens);
+        oauth2Client.setCredentials({access_token: tokens.access_token});
 
         const calendars = await listCalendars();
         if (calendars.length === 0) {
             throw new Error('Nada encontrado');
         }
         const calendarId = calendars[0].id;
+
+        let oauth2 = google.oauth2({
+            auth: oauth2Client,
+            version: 'v2'
+          });
+
+        const data = await oauth2.userinfo.get();
+        await saveTokens(data.data.name, data.data.email, tokens.access_token, tokens.refresh_token);
+  
 
         await syncGoogleCalendarWithDatabase(tokens.access_token);
 
