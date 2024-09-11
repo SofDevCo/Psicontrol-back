@@ -6,6 +6,10 @@ router.get('/create-event-form', (req, res) => {
     res.redirect('http://localhost:3001/create-event-form');
 });
 
+router.get('/select-calendar', (req, res) => {
+    res.redirect('http://localhost:3001/select-calendar');
+});
+
 router.post('/create-event', eventController.createEvent);
 router.post('/sync-calendar', eventController.syncCalendar);
 router.post('/sync-calendar/:calendarId', eventController.syncCalendar);

@@ -21,8 +21,8 @@ const saveTokens = async (name, email, accessToken, refreshToken) => {
             await user.save();
         }
     } catch (error) {
-        console.error('Erro ao salvar tokens no banco de dados:', error);
-        throw new Error('Erro ao salvar tokens.');
+        console.error('Error saving tokens to database:', error);
+        throw new Error('Error saving tokens.');
     }
 };
 
