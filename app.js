@@ -23,6 +23,8 @@ app.get('/google', initiateGoogleAuth);
 app.get('/oauth2callback', handleOAuth2Callback);
 app.use('/events', eventRoutes);
 
+require('./cronjob/cronJob');
+
 app.listen(port, () => {
     console.log(`Servidor rodando em http://localhost:${port}`);
 });

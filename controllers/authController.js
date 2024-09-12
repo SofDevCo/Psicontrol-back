@@ -2,7 +2,6 @@ const { google } = require('googleapis');
 const { Evento } = require('../models/eventModel');
 const { Calendar } = require('../models/calendarModel');
 const { listCalendars } = require('../services/calendarService');
-
 const { oauth2Client, authUrl } = require('../config/oauth2');
 const { saveTokens } = require('./tokenController');
 const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
@@ -13,7 +12,7 @@ const fetchGoogleCalendars = async (accessToken) => {
     try {
         // console.log('Fetching calendars from Google Calendar...');
         const response = await calendar.calendarList.list();
-        return response.data.items;
+        return response.data.items; 
     } catch (error) {
         console.error('Erro ao buscar calendários:', error);
         throw new Error('Erro ao buscar calendários.');
@@ -51,6 +50,7 @@ const fetchGoogleCalendarEvents = async (accessToken, calendarId) => {
 
 const syncGoogleCalendarWithDatabase = async (accessToken) => {
     try {
+        oauth2Client.setCredentials({ access_token: accessToken });
         const calendars = await fetchGoogleCalendars(accessToken);
 
         for (const calendar of calendars) {
@@ -159,11 +159,11 @@ async function handleOAuth2Callback(req, res) {
 
         await syncGoogleCalendarWithDatabase(tokens.access_token);
 
-        res.redirect('/events/create-event-form');
+        res.redirect('/events/select-calendar');
     } catch (error) {
         console.error('Erro ao obter o token de autenticação:', error);
         res.status(500).send('Erro ao concluir a autenticação.');
     }
 }
 
-module.exports = { handleOAuth2Callback, initiateGoogleAuth, syncGoogleCalendarWithDatabase, fetchGoogleCalendarEvents };
+module.exports = { handleOAuth2Callback, initiateGoogleAuth, syncGoogleCalendarWithDatabase, fetchGoogleCalendarEvents, fetchGoogleCalendars };
