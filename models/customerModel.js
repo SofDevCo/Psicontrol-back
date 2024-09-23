@@ -11,22 +11,18 @@ const Customer = sequelize.define('Customer', {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-            model: 'users', // Nome da tabela de usuários em minúsculo
-            key: 'user_id', // Nome da coluna no modelo User
+            model: 'users', 
+            key: 'user_id', 
         },
     },
     customer_name: {
         type: DataTypes.STRING(255),
         allowNull: false,
     },
-    customer_cpf: {
-        type: DataTypes.STRING(11),
-        allowNull: false,
-    },
-    customer_cnpj: {
+    customer_cpf_cnpj: {
         type: DataTypes.STRING(14),
-        allowNull: true,
-    },
+        allowNull: false,
+    },  
     customer_phone: {
         type: DataTypes.STRING(15),
         allowNull: true,
@@ -47,12 +43,12 @@ const Customer = sequelize.define('Customer', {
         type: DataTypes.STRING(255),
         allowNull: true,
     },
-    alternative_cpf: {
-        type: DataTypes.STRING(11),
+    alternative_cpf_cnpj: {
+        type: DataTypes.STRING(14),
         allowNull: true,
     },
 }, {
-    tableName: 'customers', // Nome da tabela de clientes em minúsculo
+    tableName: 'customers', 
     timestamps: false,
 });
 

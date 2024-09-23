@@ -20,7 +20,7 @@ const syncAllCalendars = async () => {
                 console.log(`Access token updated for user: ${user_id}`);
 
                 await fetchGoogleCalendars(newAccessToken);
-                console.log(`Calendars fetched for user: ${user_id}`);
+                console.log(`Calendars fetched for user: ${user_id}`);s
 
                 await syncGoogleCalendarWithDatabase(newAccessToken);
                 console.log(`Google Calendar synchronized for user: ${user_id}`);
@@ -35,7 +35,7 @@ const syncAllCalendars = async () => {
     }
 };
 
-cron.schedule('*/1 * * * *', async () => {
+cron.schedule('* */1 * * *', async () => {
     console.log('Executing cron job...');
     try {
         await syncAllCalendars(); 

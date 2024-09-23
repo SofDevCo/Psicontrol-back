@@ -20,7 +20,7 @@ router.get('/get-events', eventController.getEvents);
 router.get('/calendars', eventController.listCalendars);
 router.delete('/cancel/:google_event_id/:calendarId', eventController.deleteEvent);
 
-router.post('/create-customer', customerController.createCustomer); // Criação de cliente
-router.get('/customers', customerController.getCustomers); // Listagem de clientes
+router.post('/create-customer', customerController.createCustomer); 
+router.get('/customers', customerController.getCustomers); 
 
 module.exports = router;
