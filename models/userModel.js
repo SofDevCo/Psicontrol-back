@@ -10,7 +10,7 @@ const User = sequelize.define('User', {
     google_user_id:{
         type: DataTypes.STRING,
         allowNull: true,
-
+        unique:true,
     },
     user_name: {
         type: DataTypes.STRING(255),

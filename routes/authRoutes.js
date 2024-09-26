@@ -11,7 +11,7 @@ router.get('/', (req, res) => {
 
 router.get('/oauth2callback', handleOAuth2Callback);
 router.get('/google', initiateGoogleAuth);
-
+router.get('/auth/google/callback', handleOAuth2Callback);
 router.get('/get-user-id', getUserId);
 
 module.exports = router;

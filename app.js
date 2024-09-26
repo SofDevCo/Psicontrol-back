@@ -53,6 +53,7 @@ app.get('/google', initiateGoogleAuth);
 app.get('/oauth2callback', handleOAuth2Callback);
 app.use('/events', eventRoutes);
 app.use('/income', revenueRoutes); 
+app.get('/auth/google/callback', handleOAuth2Callback);
 app.get('/get-user-id', getUserId);
 
     // if (req.session && req.session.userId) {

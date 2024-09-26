@@ -50,8 +50,19 @@ const updateAccessToken = async(userId, newAccessToken) => {
     }
 }
 
+const findCreateUser = async (googleUserId, userData) => {
+    const [user, created] = await User.findOrCreate({
+        where: {google_user_id: googleUserId},
+        defaults: userData,
+    })
+    return user;
+};
+
+module.exports={findCreateUser};
+
 module.exports={
     getAllAccessToken,
     refreshAccessToken,
-    updateAccessToken
+    updateAccessToken,
+    findCreateUser
 }

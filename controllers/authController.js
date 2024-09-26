@@ -6,6 +6,7 @@ const { oauth2Client, authUrl } = require('../config/oauth2');
 const { saveTokens } = require('./tokenController');
 const { get } = require('../routes/eventRoutes');
 const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+const {findCreateUser} = require('../services/getTokenService');
 
 const fetchGoogleCalendars = async (accessToken) => {
     oauth2Client.setCredentials({ access_token: accessToken });
@@ -143,43 +144,43 @@ const getUserId = (req, res) => {
 };
 
 
-
 async function handleOAuth2Callback(req, res) {
     const { code } = req.query;
     if (!code) {
         return res.status(400).send('Código de autorização ausente.');
     }
     try {
-        // Obter o token de acesso com o código de autorização
         const { tokens } = await oauth2Client.getToken(code);
         oauth2Client.setCredentials({ access_token: tokens.access_token });
 
-        // Listar os calendários
         const calendars = await listCalendars();
         if (calendars.length === 0) {
             throw new Error('Nenhum calendário encontrado.');
         }
         const calendarId = calendars[0].id;
 
-        // Instanciar o serviço de OAuth2 para obter as informações do usuário
         let oauth2 = google.oauth2({
             auth: oauth2Client,
             version: 'v2'
         });
 
-        // Obter as informações do usuário
         const { data } = await oauth2.userinfo.get();
 
-        // Salvar tokens no banco ou em algum armazenamento
         await saveTokens(data.name, data.email, tokens.access_token, tokens.refresh_token);
 
-        // Armazenar o userId na sessão
-        req.session.userId = data.id;  // Aqui estamos armazenando o userId do Google na sessão
+        const userData = {
+            user_name: data.name,
+            user_email: data.email,
+            access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token,
+        };
 
-        // Sincronizar o calendário do Google com o banco de dados
+        const user = await findCreateUser(data.id, userData);
+
+        req.session.userId = data.id;
+
         await syncGoogleCalendarWithDatabase(tokens.access_token);
 
-        // Redirecionar para a página de seleção de calendário
         res.redirect('/events/select-calendar');
     } catch (error) {
         console.error('Erro ao obter o token de autenticação:', error);

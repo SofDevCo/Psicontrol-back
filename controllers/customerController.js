@@ -28,7 +28,7 @@ exports.createCustomer = async (req, res) => {
         const validPatientStatus = patient_status === 'true' ? true : patient_status === 'false' ? false : null;
 
         const newCustomer = await Customer.create({
-            user_id: user.user_id, 
+            user_id: user.google_user_id, 
             customer_name,
             customer_cpf_cnpj,
             customer_phone,
