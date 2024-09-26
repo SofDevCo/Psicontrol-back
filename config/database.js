@@ -7,4 +7,4 @@ const sequelize = new Sequelize(DB_DATABASE, DB_USER, DB_PASSWORD, {
     port: DB_PORT,
 });
 
-module.exports = { sequelize };
+module.exports = { sequelize }; // Isso está correto

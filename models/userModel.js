@@ -7,6 +7,11 @@ const User = sequelize.define('User', {
         autoIncrement: true,
         primaryKey: true,
     },
+    google_user_id:{
+        type: DataTypes.STRING,
+        allowNull: true,
+
+    },
     user_name: {
         type: DataTypes.STRING(255),
         allowNull: false,

@@ -2,9 +2,11 @@
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.2",
+    "connect-pg-simple": "^10.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "express-session": "^1.18.0",
     "googleapis": "^142.0.0",
     "jsonwebtoken": "^9.0.2",
     "node-cron": "^3.0.3",
