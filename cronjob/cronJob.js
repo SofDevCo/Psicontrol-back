@@ -20,7 +20,7 @@ const syncAllCalendars = async () => {
                 console.log(`Access token updated for user: ${user_id}`);
 
                 await fetchGoogleCalendars(newAccessToken);
-                console.log(`Calendars fetched for user: ${user_id}`);s
+                console.log(`Calendars fetched for user: ${user_id}`);
 
                 await syncGoogleCalendarWithDatabase(newAccessToken);
                 console.log(`Google Calendar synchronized for user: ${user_id}`);
