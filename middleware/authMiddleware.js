@@ -10,7 +10,8 @@ exports.verifyToken = (req, res, next) => {
         if (err) {
             return res.status(401).send('Token inválido.');
         }
-        req.userId = decoded.userId;
+        req.google_user_id = decoded.google_user_id;
+        console.log('Google User ID:', req.google_user_id);
         next();
     });
 };
