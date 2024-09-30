@@ -2,11 +2,10 @@ const express = require('express');
 const router = express.Router();
 const eventController = require('../controllers/eventController');
 const customerController = require('../controllers/customerController');
+const { verifyToken } = require('../middleware/authMiddleware');
 
-// Redireciona para o frontend
-router.get('/create-event-form', (req, res) => {
-    res.redirect('http://localhost:3001/create-event-form');
-});
+
+// router.use(verifyToken);
 
 router.get('/select-calendar', (req, res) => {
     res.redirect('http://localhost:3001/select-calendar');
