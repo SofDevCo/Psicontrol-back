@@ -4,7 +4,7 @@ const { oauth2Client } = require('../config/oauth2');
 
 const getAllAccessToken = async () => {
     try{
-        console.log('Fetching all access tokens...');
+        //console.log('Fetching all access tokens...');
         const users = await User.findAll({
             attributes: ['user_id','access_token','refresh_token'],
             where:{                                                                                                                 
@@ -12,7 +12,7 @@ const getAllAccessToken = async () => {
                 refresh_token: {[Op.ne]: null}
             }
         });
-        console.log('Users fetched:', users);
+        //console.log('Users fetched:', users);
         return users;                                
     }catch(error){
         console.error('Error fetching access tokens:', error);
@@ -24,7 +24,7 @@ const refreshAccessToken = async (refreshToken) => {
     try {
         const { tokens } = await oauth2Client.refreshToken(refreshToken);
         if (tokens && tokens.access_token) {
-            console.log('New tokens:', tokens);
+            // console.log('New tokens:', tokens);
             return tokens.access_token;
         } else {
             throw new Error('No access token received from refreshToken.');
@@ -40,29 +40,19 @@ const updateAccessToken = async(userId, newAccessToken) => {
         if(user){
             user.access_token = newAccessToken;
             await user.save();
-            console.log(`Access token updated for user ${userId}: ${newAccessToken}`);
+            // console.log(`Access token updated for user ${userId}: ${newAccessToken}`);
         }else{
             console.error(`User with ID ${userId} not found.`);
         }
     }catch(error){
         console.error('Error updating access token in database:', error);
         throw error;
-    }
+    }   
 }
 
-const findCreateUser = async (googleUserId, userData) => {
-    const [user, created] = await User.findOrCreate({
-        where: {google_user_id: googleUserId},
-        defaults: userData,
-    })
-    return user;
-};
-
-module.exports={findCreateUser};
 
 module.exports={
     getAllAccessToken,
     refreshAccessToken,
     updateAccessToken,
-    findCreateUser
 }
