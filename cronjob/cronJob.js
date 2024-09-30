@@ -10,33 +10,33 @@ const syncAllCalendars = async () => {
             const { user_id, refresh_token: refreshToken } = user;
 
             if (!refreshToken) {
-                console.error(`No refresh token available for user: ${user_id}`);
+                // console.error(`No refresh token available for user: ${user_id}`);
                 continue;
             }
 
             try {
                 const newAccessToken = await refreshAccessToken(refreshToken);
                 await updateAccessToken(user_id, newAccessToken);
-                console.log(`Access token updated for user: ${user_id}`);
+                // console.log(`Access token updated for user: ${user_id}`);
 
                 await fetchGoogleCalendars(newAccessToken);
-                console.log(`Calendars fetched for user: ${user_id}`);
+                // console.log(`Calendars fetched for user: ${user_id}`);
 
                 await syncGoogleCalendarWithDatabase(newAccessToken);
-                console.log(`Google Calendar synchronized for user: ${user_id}`);
+                // console.log(`Google Calendar synchronized for user: ${user_id}`);
             } catch (error) {
                 console.error(`Error processing user ${user_id}:`, error);
             }
         }
 
-        console.log('All calendars synchronized successfully!');
+        // console.log('All calendars synchronized successfully!');
     } catch (error) {
         console.error('Error syncing all calendars:', error);
     }
 };
 
-cron.schedule('* */1 * * *', async () => {
-    console.log('Executing cron job...');
+cron.schedule('0 * * * *', async () => {
+    //console.log('Executing cron job...');
     try {
         await syncAllCalendars(); 
     } catch (error) {
@@ -44,4 +44,4 @@ cron.schedule('* */1 * * *', async () => {
     }
 });
 
-console.log('Cron job configured to synchronize calendars every 1 minute.');
+//console.log('Cron job configured to synchronize calendars every 1 minute.');
