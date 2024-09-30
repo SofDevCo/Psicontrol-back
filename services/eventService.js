@@ -24,9 +24,9 @@ exports.deleteEventById = async (customers_id) => {
             where: { customers_id }
         });
         if (result === 0) {
-            console.log('Nenhum evento encontrado para deletar com customers_id:', customers_id);
+            // console.log('Nenhum evento encontrado para deletar com customers_id:', customers_id);
         } else {
-            console.log('Evento deletado com sucesso com customers_id:', customers_id);
+            // console.log('Evento deletado com sucesso com customers_id:', customers_id);
         }
         return result;
     } catch (error) {
@@ -43,9 +43,9 @@ exports.cancelEventByGoogleId = async (googleEventId) => {
         );
 
         if (result[0] === 0) {
-            console.log('Nenhum evento encontrado para cancelar com google_event_id:', googleEventId);
+            // console.log('Nenhum evento encontrado para cancelar com google_event_id:', googleEventId);
         } else {
-            console.log('Evento cancelado com sucesso com google_event_id:', googleEventId);
+            // console.log('Evento cancelado com sucesso com google_event_id:', googleEventId);
         }
     } catch (error) {
         console.error('Erro ao cancelar evento no banco de dados:', error);
@@ -55,7 +55,7 @@ exports.cancelEventByGoogleId = async (googleEventId) => {
 
 exports.saveEvent = async (eventData) => {
     try {
-        console.log('Salvando evento:', eventData); 
+        // console.log('Salvando evento:', eventData); 
         return await Evento.create(eventData);
     } catch (error) {
         console.error('Erro ao criar evento:', error);
@@ -65,14 +65,14 @@ exports.saveEvent = async (eventData) => {
 
 exports.updateEvent = async (eventData) => {
     try {
-        console.log('Atualizando evento:', eventData); 
+        // console.log('Atualizando evento:', eventData); 
         const [affectedRows] = await Evento.update(eventData, {
             where: { google_event_id: eventData.google_event_id }
         });
         if (affectedRows === 0) {
-            console.log('Nenhum evento encontrado para atualizar com google_event_id:', eventData.google_event_id);
+            // console.log('Nenhum evento encontrado para atualizar com google_event_id:', eventData.google_event_id);
         } else {
-            console.log('Evento atualizado com sucesso com google_event_id:', eventData.google_event_id);
+            // console.log('Evento atualizado com sucesso com google_event_id:', eventData.google_event_id);
         }
     } catch (error) {
         console.error('Erro ao atualizar evento:', error);
