@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { handleOAuth2Callback, authUrl, initiateGoogleAuth, getUserId } = require('../controllers/authController');
+const { handleOAuth2Callback, authUrl, initiateGoogleAuth} = require('../controllers/authController');
+const { verifyToken } = require('../middleware/authMiddleware');
+const { getCustomers } = require('../controllers/customerController');
 
 router.get('/', (req, res) => {
     res.send(`
@@ -11,7 +13,6 @@ router.get('/', (req, res) => {
 
 router.get('/oauth2callback', handleOAuth2Callback);
 router.get('/google', initiateGoogleAuth);
-
-router.get('/get-user-id', getUserId);
+router.get('/auth/google/callback', handleOAuth2Callback);
 
 module.exports = router;

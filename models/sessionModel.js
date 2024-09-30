@@ -1,7 +1,5 @@
-// models/session.js
-
 const { DataTypes, Model } = require('sequelize');
-const sequelize = require('../config/sequelize'); // Ajuste para o caminho correto do seu arquivo de configuração
+const sequelize = require('../config/sequelize'); 
 
 class Session extends Model {}
 
@@ -17,7 +15,7 @@ Session.init(
       allowNull: false,
     },
     expire: {
-      type: DataTypes.DATE(6), // timestamp com precisão até 6 casas decimais
+      type: DataTypes.DATE(6), 
       allowNull: false,
     },
   },

@@ -2,11 +2,10 @@ const express = require('express');
 const router = express.Router();
 const eventController = require('../controllers/eventController');
 const customerController = require('../controllers/customerController');
+const { verifyToken } = require('../middleware/authMiddleware');
 
-// Redireciona para o frontend
-router.get('/create-event-form', (req, res) => {
-    res.redirect('http://localhost:3001/create-event-form');
-});
+
+// router.use(verifyToken);
 
 router.get('/select-calendar', (req, res) => {
     res.redirect('http://localhost:3001/select-calendar');
@@ -20,7 +19,6 @@ router.get('/get-events/:calendarId', eventController.getEventsByCalendar);
 router.get('/get-events', eventController.getEvents);
 router.get('/calendars', eventController.listCalendars);
 router.delete('/cancel/:google_event_id/:calendarId', eventController.deleteEvent);
-
 router.post('/create-customer', customerController.createCustomer); 
 router.get('/customers', customerController.getCustomers); 
 
