@@ -226,7 +226,7 @@ async function handleOAuth2Callback(req, res) {
     res.status(500).send("Erro ao concluir a autenticação.");
   }
 }
-
+  
 module.exports = {
   handleOAuth2Callback,
   initiateGoogleAuth,
