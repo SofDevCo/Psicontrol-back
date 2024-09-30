@@ -7,7 +7,7 @@ const User = sequelize.define('User', {
         autoIncrement: true,
         primaryKey: true,
     },
-    google_user_id:{
+    autentication_token:{
         type: DataTypes.STRING,
         allowNull: true,
         unique:true,
