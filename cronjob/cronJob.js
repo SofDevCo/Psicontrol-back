@@ -1,47 +1,39 @@
-const cron = require('node-cron');
-const { syncGoogleCalendarWithDatabase, fetchGoogleCalendars } = require('../controllers/authController');
-const { getAllAccessToken, refreshAccessToken, updateAccessToken } = require('../services/getTokenService');
+const cron = require("node-cron");
+const {
+  syncGoogleCalendarWithDatabase,
+  fetchGoogleCalendars,
+} = require("../controllers/authController");
+const {
+  getAllAccessToken,
+  refreshAccessToken,
+  updateAccessToken,
+} = require("../services/getTokenService");
 
 const syncAllCalendars = async () => {
-    try {
-        const users = await getAllAccessToken();
+  try {
+    const users = await getAllAccessToken();
 
-        for (const user of users) {
-            const { user_id, refresh_token: refreshToken } = user;
+    for (const user of users) {
+      const { user_id, refresh_token: refreshToken } = user;
 
-            if (!refreshToken) {
-                // console.error(`No refresh token available for user: ${user_id}`);
-                continue;
-            }
+      if (!refreshToken) {
+        continue;
+      }
 
-            try {
-                const newAccessToken = await refreshAccessToken(refreshToken);
-                await updateAccessToken(user_id, newAccessToken);
-                // console.log(`Access token updated for user: ${user_id}`);
+      try {
+        const newAccessToken = await refreshAccessToken(refreshToken);
+        await updateAccessToken(user_id, newAccessToken);
 
-                await fetchGoogleCalendars(newAccessToken);
-                // console.log(`Calendars fetched for user: ${user_id}`);
+        await fetchGoogleCalendars(newAccessToken);
 
-                await syncGoogleCalendarWithDatabase(newAccessToken);
-                // console.log(`Google Calendar synchronized for user: ${user_id}`);
-            } catch (error) {
-                console.error(`Error processing user ${user_id}:`, error);
-            }
-        }
-
-        // console.log('All calendars synchronized successfully!');
-    } catch (error) {
-        console.error('Error syncing all calendars:', error);
+        await syncGoogleCalendarWithDatabase(newAccessToken);
+      } catch (error) {}
     }
+  } catch (error) {}
 };
 
-cron.schedule('0 * * * *', async () => {
-    //console.log('Executing cron job...');
-    try {
-        await syncAllCalendars(); 
-    } catch (error) {
-        console.error('Error executing cron job:', error);
-    }
+cron.schedule("0 * * * *", async () => {
+  try {
+    await syncAllCalendars();
+  } catch (error) {}
 });
-
-//console.log('Cron job configured to synchronize calendars every 1 minute.');

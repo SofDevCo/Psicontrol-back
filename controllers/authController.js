@@ -1,5 +1,5 @@
 const { google } = require("googleapis");
-const { User, Calendar, Evento } = require("../models");
+const { User, Calendar, Event } = require("../models");
 const { listCalendars } = require("../services/calendarService");
 const { oauth2Client, authUrl } = require("../config/oauth2");
 const { saveTokens } = require("./tokenController");
@@ -10,13 +10,9 @@ const fetchGoogleCalendars = async (accessToken) => {
   oauth2Client.setCredentials({ access_token: accessToken });
 
   try {
-    // console.log('Fetching calendars from Google Calendar...');
     const response = await calendar.calendarList.list();
     return response.data.items;
-  } catch (error) {
-    console.error("Erro ao buscar calendários:", error);
-    throw new Error("Erro ao buscar calendários.");
-  }
+  } catch (error) {}
 };
 
 const fetchGoogleCalendarEvents = async (accessToken, calendarId) => {
@@ -29,7 +25,6 @@ const fetchGoogleCalendarEvents = async (accessToken, calendarId) => {
   twoMonthsBefore.setMonth(now.getMonth() - 2);
   twoMonthsAfter.setMonth(now.getMonth() + 2);
 
-  // console.log('Fetching events from Google Calendar...');
   const response = await calendar.events.list({
     calendarId: calendarId,
     timeMin: twoMonthsBefore.toISOString(),
@@ -66,7 +61,6 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
       });
 
       const user = await User.findOne({ where: { access_token: accessToken } });
-      console.log(user);
 
       if (!dbCalendar) {
         await Calendar.create({
@@ -79,7 +73,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
       const events = await fetchGoogleCalendarEvents(accessToken, calendarId);
 
       for (const event of events) {
-        const eventExists = await Evento.findOne({
+        const eventExists = await Event.findOne({
           where: { google_event_id: event.id },
         });
 
@@ -106,7 +100,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
         }
 
         if (eventExists) {
-          await Evento.update(
+          await Event.update(
             {
               event_name: event.summary,
               date: startDate,
@@ -119,7 +113,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
             { where: { google_event_id: event.id } }
           );
         } else {
-          await Evento.create({
+          await Event.create({
             event_name: event.summary,
             date: startDate,
             google_event_id: event.id,
@@ -133,33 +127,22 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
       }
       await deleteNonexistentGoogleEvents(events, calendarId);
     }
-  } catch (error) {
-    console.error("Erro ao sincronizar eventos com o banco de dados:", error);
-  }
+  } catch (error) {}
 };
 
 const deleteNonexistentGoogleEvents = async (events, calendarId) => {
   try {
     const googleEventIds = events.map((event) => event.id);
-    const allDbEvents = await Evento.findAll({
+    const allDbEvents = await Event.findAll({
       where: { calendar_id: calendarId },
     });
 
     for (const dbEvent of allDbEvents) {
       if (!googleEventIds.includes(dbEvent.google_event_id)) {
         await dbEvent.update({ status: "cancelado" });
-        // console.log(`Evento com ID ${dbEvent.google_event_id} marcado como cancelado no banco de dados.`);
       }
     }
-  } catch (error) {
-    console.error(
-      "Erro ao atualizar eventos inexistentes no Google Calendar:",
-      error
-    );
-    throw new Error(
-      "Erro ao atualizar eventos inexistentes no Google Calendar."
-    );
-  }
+  } catch (error) {}
 };
 
 const initiateGoogleAuth = (req, res) => {
@@ -187,7 +170,6 @@ async function handleOAuth2Callback(req, res) {
     });
 
     const { data } = await oauth2.userinfo.get();
-    console.log("Email extraído:", data.email);
 
     if (!data.email) {
       return res.status(400).json({
@@ -220,13 +202,12 @@ async function handleOAuth2Callback(req, res) {
 
     await syncGoogleCalendarWithDatabase(tokens.access_token);
 
-    res.redirect(`http://localhost:3001/token/${authenticationToken}`);
+    res.redirect(`http://localhost:3001/token?token=${authenticationToken}`);
   } catch (error) {
-    console.error("Erro ao obter o token de autenticação:", error);
     res.status(500).send("Erro ao concluir a autenticação.");
   }
 }
-  
+
 module.exports = {
   handleOAuth2Callback,
   initiateGoogleAuth,
