@@ -95,6 +95,28 @@ const revenueController = {
       res.status(500).json({ error: "Erro ao deletar despesa" });
     }
   },
+  
+  deleteExpense: async (req, res) => {
+    
+    try {
+      const { id } = req.params; 
+      const expense = await income.destroy({
+        where: { id } 
+      });
+  
+      if (expense > 0) {
+        console.log('Despesa deletada com sucesso:', expense);
+        res.status(200).json({ message: 'Despesa deletada com sucesso' });
+      } else {
+        res.status(404).json({ error: 'Despesa não encontrada' });
+      }
+    } catch (error) {
+      console.error("Erro ao deletar despesa:", error.message);
+      res.status(500).json({ error: 'Erro ao deletar despesa' });
+    }
+  },
+  
+  
 
   getEntriesByUserId: async (req, res) => {
     try {
