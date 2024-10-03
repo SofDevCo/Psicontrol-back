@@ -37,7 +37,7 @@ const income = sequelize.define(
     },
   },
   {
-    tableName: "entries",
+    tableName: "income",
     timestamps: false,
   }
 );
