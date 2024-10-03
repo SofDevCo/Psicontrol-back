@@ -3,13 +3,11 @@ const { Customer, User } = require("../models");
 exports.createCustomer = async (req, res) => {
   try {
     const user = req.user;
-    console.log("User ID em createCustomer:", user);
 
     if (!user) {
       return res.status(401).json({ error: "Usuário não autenticado." });
     }
 
-    console.log("error: ");
     const {
       customer_name,
       customer_cpf_cnpj,
@@ -46,10 +44,8 @@ exports.createCustomer = async (req, res) => {
       alternative_cpf_cpnj,
     });
 
-    console.log("campos: ", newCustomer);
     res.status(201).json(newCustomer);
   } catch (error) {
-    console.error("Erro ao criar cliente:", error.message, error.stack);
     res.status(500).json({ error: "Erro interno ao criar cliente." });
   }
 };
@@ -57,19 +53,17 @@ exports.createCustomer = async (req, res) => {
 exports.getCustomers = async (req, res) => {
   try {
     const userId = req.user.user_id;
-    console.log("User ID em getCustomers:", userId);
 
     if (!userId) {
       return res.status(401).json({ error: "Usuário não autenticado." });
     }
 
     const customers = await Customer.findAll({
-      where: { user_id: req.user.user_id},
+      where: { user_id: req.user.user_id },
     });
 
     res.json(customers);
   } catch (error) {
-    console.error("Erro ao buscar clientes:", error);
     res.status(500).send("Erro interno do servidor.");
   }
 };

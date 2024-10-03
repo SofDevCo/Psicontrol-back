@@ -1,8 +1,10 @@
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/database');
-const { Customer }= require('./customerModel');
+const { DataTypes } = require("sequelize");
+const { sequelize } = require("../config/database");
+const { Customer } = require("./customerModel");
 
-const CustomersBillingRecords = sequelize.define('CustomersBillingRecords', {
+const CustomersBillingRecords = sequelize.define(
+  "CustomersBillingRecords",
+  {
     id: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
@@ -13,7 +15,7 @@ const CustomersBillingRecords = sequelize.define('CustomersBillingRecords', {
       allowNull: false,
       references: {
         model: Customer,
-        key: 'customer_id',
+        key: "customer_id",
       },
     },
     month_and_year: {
@@ -41,16 +43,18 @@ const CustomersBillingRecords = sequelize.define('CustomersBillingRecords', {
       allowNull: true,
     },
     payment_status: {
-      type: DataTypes.ENUM('aberto', 'pago', 'parcial'),
+      type: DataTypes.ENUM("aberto", "pago", "parcial"),
       allowNull: false,
     },
     sending_invoice: {
       type: DataTypes.BOOLEAN,
       allowNull: true,
     },
-  }, {
-    tableName: 'Customers_billing_records',
+  },
+  {
+    tableName: "Customers_billing_records",
     timestamps: false,
-  });
-  
-  module.exports = { CustomersBillingRecords } ;
+  }
+);
+
+module.exports = { CustomersBillingRecords };

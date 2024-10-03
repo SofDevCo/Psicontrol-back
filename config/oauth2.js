@@ -2,7 +2,6 @@ const { google } = require('googleapis');
 const { CLIENT_ID, CLIENT_SECRET, REDIRECT_URI } = process.env;
 
 if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
-    console.error('Faltam variáveis de ambiente necessárias.');
     process.exit(1);
 }
 

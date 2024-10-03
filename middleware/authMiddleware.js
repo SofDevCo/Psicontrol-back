@@ -7,8 +7,10 @@ exports.verifyToken = (req, res, next) => {
     return res.status(403).send("Token não fornecido.");
   }
 
-  const user = User.findOne({ where: { autentication_token: token } }).then(user => {
-    req.user = user ;
-    next();
-  })
+  const user = User.findOne({ where: { autentication_token: token } }).then(
+    (user) => {
+      req.user = user;
+      next();
+    }
+  );
 };

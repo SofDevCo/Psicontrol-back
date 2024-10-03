@@ -5,18 +5,14 @@ const {
 } = require("../services/eventService");
 const { syncGoogleCalendarWithDatabase } = require("./authController");
 const { oauth2Client } = require("../config/oauth2");
-const { Evento } = require("../models/eventModel");
-const { where } = require("sequelize");
+const { Event, Calendar } = require("../models");
 
 const authenticateClient = async () => {
   if (!oauth2Client.credentials || !oauth2Client.credentials.access_token) {
     try {
       const tokens = await oauth2Client.refreshAccessToken();
       oauth2Client.setCredentials(tokens.credentials);
-    } catch (error) {
-      console.error("Erro ao autenticar o cliente OAuth2:", error);
-      throw new Error("Erro ao autenticar o cliente OAuth2.");
-    }
+    } catch (error) {}
   }
 };
 
@@ -39,10 +35,7 @@ const createEventInGoogleCalendar = async (event, calendarId) => {
       },
     });
     return response.data.id;
-  } catch (error) {
-    console.error("Erro ao criar evento no Google Calendar:", error);
-    throw new Error("Erro ao criar evento no Google Calendar.");
-  }
+  } catch (error) {}
 };
 
 const deleteEventFromGoogleCalendar = async (calendarId, googleEventId) => {
@@ -51,26 +44,11 @@ const deleteEventFromGoogleCalendar = async (calendarId, googleEventId) => {
 
     const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 
-    if (!googleEventId) {
-      throw new Error("O ID do evento não pode estar vazio.");
-    }
-
-    //console.log('Tentando deletar evento com ID:', googleEventId);
     await calendar.events.delete({
       calendarId: calendarId,
       eventId: googleEventId,
     });
-
-    console.log("Evento deletado com sucesso do Google Calendar.");
-  } catch (error) {
-    console.error("Erro ao deletar evento do Google Calendar:", {
-      message: error.message,
-      stack: error.stack,
-      response: error.response ? error.response.data : "Sem resposta",
-      config: error.config,
-    });
-    throw new Error("Erro ao deletar evento do Google Calendar.");
-  }
+  } catch (error) {}
 };
 
 exports.createEvent = async (req, res) => {
@@ -99,17 +77,11 @@ exports.createEvent = async (req, res) => {
 
     res.send("Evento criado com sucesso.");
   } catch (error) {
-    console.error("Erro ao criar evento:", error);
-    if (error.message) {
-      res.status(500).send(error.message);
-    } else {
-      res.status(500).send("Erro interno do servidor.");
-    }
+    res.status(500).send(error.message);
   }
 };
 
 exports.deleteEvent = async (req, res) => {
-  // console.log("Delete request params:", req.params);
   const { google_event_id, calendarId } = req.params;
 
   try {
@@ -130,7 +102,6 @@ exports.deleteEvent = async (req, res) => {
 
     res.send("Evento cancelado com sucesso.");
   } catch (error) {
-    console.error("Erro ao cancelar evento:", error);
     res.status(500).send(`Erro interno do servidor: ${error.message}`);
   }
 };
@@ -146,22 +117,14 @@ const checkEventExists = async (googleEventId, calendarId) => {
     });
 
     return event.data;
-  } catch (error) {
-    if (error.response && error.response.status === 404) {
-      console.log("Evento não encontrado no Google Calendar.");
-    } else {
-      console.error("Erro ao verificar evento:", error);
-    }
-    return null;
-  }
+  } catch (error) {}
 };
 
 exports.getEvents = async (req, res) => {
   try {
-    const events = await Evento.find({where: {user_id: req.user.user_id}});
+    const events = await Event.find({ where: { user_id: req.user.user_id } });
     res.json(events);
   } catch (error) {
-    console.error("Erro ao buscar eventos:", error);
     res.status(500).send("Erro interno do servidor.");
   }
 };
@@ -181,7 +144,6 @@ exports.syncCalendar = async (req, res) => {
 
     res.json({ message: "Calendário sincronizado com sucesso." });
   } catch (error) {
-    console.error("Erro ao sincronizar o calendário:", error);
     res.status(500).send("Erro ao sincronizar o calendário.");
   }
 };
@@ -192,13 +154,12 @@ exports.listCalendars = async (req, res) => {
       access_token: req.user.access_token,
       refresh_token: req.user.refresh_token,
     });
-   
+
     const calendar = google.calendar({ version: "v3", auth: oauth2Client });
     const response = await calendar.calendarList.list();
 
     res.json(response.data.items);
   } catch (error) {
-    console.error("Erro ao listar os calendários:", error);
     res.status(500).send("Erro ao listar os calendários.");
   }
 };
@@ -206,14 +167,37 @@ exports.listCalendars = async (req, res) => {
 exports.getEventsByCalendar = async (req, res) => {
   try {
     const { calendarId } = req.params;
-    console.log("calendarId", calendarId);
 
-    const events = await Evento.findAll({
-      where: { calendar_id: calendarId },
+    const events = await Event.findAll({
+      where: { calendar_id: calendarId, user_id: req.user.user_id },
     });
     res.json(events);
   } catch (error) {
-    console.error("Erro ao buscar eventos por calendário:", error);
     res.status(500).json({ error: "Erro ao buscar eventos." });
+  }
+};
+
+exports.saveSelectedCalendars = async (req, res) => {
+  const { calendarId } = req.params;
+  const { enabled } = req.body;
+
+  try {
+    const calendar = await Calendar.findOne({
+      where: { calendar_id: calendarId },
+    });
+
+    if (calendar) {
+      await Calendar.update(
+        { enabled },
+        { where: { calendar_id: calendarId } }
+      );
+      res
+        .status(200)
+        .json({ message: "Status do calendário atualizado com sucesso!" });
+    } else {
+      res.status(404).json({ error: "Calendário não encontrado." });
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao atualizar o calendário." });
   }
 };
