@@ -1,15 +1,16 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const revenueController = require('../controllers/revenueController'); // Importa o controller
+const revenueController = require("../controllers/revenueController");
 
-router.post('/revenue/:user_id', revenueController.Revenue);
-router.post('/expense/:user_id', revenueController.addExpense);
+router.post("/revenue", revenueController.addRevenue);
+router.post("/expense", revenueController.addExpense);
 
-router.get('/entries/:user_id', revenueController.getEntriesByUserId);
+router.get("/revenue", revenueController.getRevenueByUserId);
+router.get("/expense", revenueController.getExpenseByUserId);
 
-router.delete('/revenue/:id', revenueController.deleteRevenue);
-router.delete('/expense/:id', revenueController.deleteExpense);
+router.get("/entries", revenueController.getEntriesByUserId);
 
-
+router.delete("/revenue/:id", revenueController.deleteRevenue);
+router.delete("/expense/:id", revenueController.deleteExpense);
 
 module.exports = router;

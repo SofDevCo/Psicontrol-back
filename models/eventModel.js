@@ -2,8 +2,8 @@ const { DataTypes } = require("sequelize");
 const { sequelize } = require("../config/database");
 const { Calendar } = require("./calendarModel");
 
-const Evento = sequelize.define(
-  "Evento",
+const Event = sequelize.define(
+  "Event",
   {
     customers_id: {
       type: DataTypes.INTEGER,
@@ -53,4 +53,4 @@ const Evento = sequelize.define(
   }
 );
 
-module.exports = { Evento };
+module.exports = { Event };
