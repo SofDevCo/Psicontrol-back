@@ -13,7 +13,6 @@ const revenueController = {
         value,
         type: "revenue",
       });
-
       res.status(201).json(revenue);
     } catch (error) {
       res.status(500).json({ error: "Erro ao adicionar receita" });
@@ -24,7 +23,6 @@ const revenueController = {
     try {
       const { date, name, value } = req.body;
       const user = req.user;
-
       const expense = await income.create({
         user_id: user.user_id,
         date,
