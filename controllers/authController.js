@@ -52,9 +52,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
     for (const calendar of calendars) {
       const calendarId = calendar.id;
 
-      if (!calendarId) {
-        throw new Error("calendarId is not defined");
-      }
+   
 
       const dbCalendar = await Calendar.findOne({
         where: { calendar_id: calendarId },
@@ -160,9 +158,7 @@ async function handleOAuth2Callback(req, res) {
     oauth2Client.setCredentials({ access_token: tokens.access_token });
 
     const calendars = await listCalendars();
-    if (calendars.length === 0) {
-      throw new Error("Nenhum calendário encontrado.");
-    }
+
 
     let oauth2 = google.oauth2({
       auth: oauth2Client,
