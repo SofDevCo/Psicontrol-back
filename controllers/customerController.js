@@ -16,7 +16,7 @@ exports.createCustomer = async (req, res) => {
       consultation_fee,
       patient_status,
       alternative_name,
-      alternative_cpf_cpnj,
+      alternative_cpf_cnpj,
     } = req.body;
 
     if (!customer_name || !customer_cpf_cnpj) {
@@ -41,7 +41,7 @@ exports.createCustomer = async (req, res) => {
       consultation_fee,
       patient_status: validPatientStatus,
       alternative_name,
-      alternative_cpf_cpnj,
+      alternative_cpf_cnpj,
     });
 
     res.status(201).json(newCustomer);
@@ -49,6 +49,7 @@ exports.createCustomer = async (req, res) => {
     res.status(500).json({ error: "Erro interno ao criar cliente." });
   }
 };
+
 
 exports.getCustomers = async (req, res) => {
   try {
@@ -67,3 +68,11 @@ exports.getCustomers = async (req, res) => {
     res.status(500).send("Erro interno do servidor.");
   }
 };
+
+// exports.deleteCustomer = async (req,res) => {
+//   const {customerId} = req.params;
+//   const customer = await Customer.destroy({
+//     where: {customer_id: customerId.customer_id}
+//   })
+//   res.status(200).json(customer);
+// }
