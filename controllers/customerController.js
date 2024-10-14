@@ -1,39 +1,40 @@
 const { Customer, User } = require("../models");
 
-exports.createCustomer = async (req, res) => {
-  try {
-    const user = req.user;
+exports.upsertCustomer = async (userId, customerData) => {
+  const {
+    customer_id,
+    customer_name,
+    customer_cpf_cnpj,
+    customer_phone,
+    customer_email,
+    consultation_fee,
+    patient_status,
+    alternative_name,
+    alternative_cpf_cnpj,
+  } = customerData;
 
-    if (!user) {
+  if (!customer_name || !customer_cpf_cnpj) {
+    return res
+      .status(400)
+      .json({ error: "customer_name e customer_cpf_cnpj são obrigatórios." });
+  }
+
+  const validPatientStatus =
+    patient_status === "true"
+      ? true
+      : patient_status === "false"
+      ? false
+      : null;
+
+  if (customer_id) {
+    const customer = await Customer.findOne({
+      where: { customer_id, user_id: userId },
+    });
+    if (!customer) {
       return res.status(401).json({ error: "Usuário não autenticado." });
     }
 
-    const {
-      customer_name,
-      customer_cpf_cnpj,
-      customer_phone,
-      customer_email,
-      consultation_fee,
-      patient_status,
-      alternative_name,
-      alternative_cpf_cnpj,
-    } = req.body;
-
-    if (!customer_name || !customer_cpf_cnpj) {
-      return res
-        .status(400)
-        .json({ error: "customer_name e customer_cpf_cnpj são obrigatórios." });
-    }
-
-    const validPatientStatus =
-      patient_status === "true"
-        ? true
-        : patient_status === "false"
-        ? false
-        : null;
-
-    const newCustomer = await Customer.create({
-      user_id: user.user_id,
+    await customer.update({
       customer_name,
       customer_cpf_cnpj,
       customer_phone,
@@ -44,10 +45,37 @@ exports.createCustomer = async (req, res) => {
       alternative_cpf_cnpj,
     });
 
-    res.status(201).json(newCustomer);
-  } catch (error) {
-    res.status(500).json({ error: "Erro interno ao criar cliente." });
+    return customer;
+  } else {
+    const newCustomer = await Customer.create({
+      user_id: userId,
+      customer_name,
+      customer_cpf_cnpj,
+      customer_phone,
+      customer_email,
+      consultation_fee,
+      patient_status: validPatientStatus,
+      alternative_name,
+      alternative_cpf_cnpj,
+    });
+
+    return newCustomer;
   }
+};
+
+exports.createCustomer = async (req, res) => {
+  const user = req.user;
+  const newCustomer = await this.upsertCustomer(user.user_id, req.body);
+  res.status(201).json(newCustomer);
+};
+
+exports.editCustomer = async (req, res) => {
+  const user = req.user;
+  const updateCustomer = await this.upsertCustomer(user.user_id, {
+    customer_id: req.params.customerId,
+    ...req.body,
+  });
+  res.status(200).json(updateCustomer);
 };
 
 exports.getCustomers = async (req, res) => {
