@@ -21,6 +21,8 @@ router.delete(
 );
 router.post("/create-customer", customerController.createCustomer);
 router.get("/customers", customerController.getCustomers);
+router.delete("/customers/:customerId", customerController.deleteCustomer)
+// router.delete("/customers:customer_id", customerController.deleteCustomer)
 router.post(
   "/calendars/selection/:calendarId",
   eventController.saveSelectedCalendars

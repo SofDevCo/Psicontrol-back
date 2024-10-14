@@ -50,7 +50,6 @@ exports.createCustomer = async (req, res) => {
   }
 };
 
-
 exports.getCustomers = async (req, res) => {
   try {
     const userId = req.user.user_id;
@@ -69,10 +68,21 @@ exports.getCustomers = async (req, res) => {
   }
 };
 
-// exports.deleteCustomer = async (req,res) => {
-//   const {customerId} = req.params;
-//   const customer = await Customer.destroy({
-//     where: {customer_id: customerId.customer_id}
-//   })
-//   res.status(200).json(customer);
-// }
+exports.deleteCustomer = async (req, res, next) => {
+  const { customerId } = req.params;
+  const userId = req.user.user_id;
+
+  const customer = await Customer.findOne({
+    where: { customer_id: customerId, user_id: userId },
+  });
+
+  if (!customer) {
+    return res
+      .status(404)
+      .json({ error: "Cliente não encontrado ou não autorizado." });
+  }
+
+  await Customer.destroy({ where: { customer_id: customerId } });
+
+  res.status(200).json({ message: "Cliente deletado com sucesso." });
+};
