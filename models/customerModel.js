@@ -49,6 +49,10 @@ const Customer = sequelize.define(
       type: DataTypes.STRING(14),
       allowNull: true,
     },
+    customer_dob: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    }
   },
   {
     tableName: "customers",
