@@ -1,4 +1,5 @@
 const { Customer, User } = require("../models");
+const {formatDateIso } = require("../utils/dateUtils")
 
 exports.upsertCustomer = async (userId, customerData) => {
   const {
@@ -11,6 +12,7 @@ exports.upsertCustomer = async (userId, customerData) => {
     patient_status,
     alternative_name,
     alternative_cpf_cnpj,
+    customer_dob,
   } = customerData;
 
   if (!customer_name || !customer_cpf_cnpj) {
@@ -25,6 +27,8 @@ exports.upsertCustomer = async (userId, customerData) => {
       : patient_status === "false"
       ? false
       : null;
+
+  const formattedCustomerDob = formatDateIso(customer_dob)
 
   if (customer_id) {
     const customer = await Customer.findOne({
@@ -43,6 +47,7 @@ exports.upsertCustomer = async (userId, customerData) => {
       patient_status: validPatientStatus,
       alternative_name,
       alternative_cpf_cnpj,
+      customer_dob: formattedCustomerDob,
     });
 
     return customer;
@@ -57,6 +62,7 @@ exports.upsertCustomer = async (userId, customerData) => {
       patient_status: validPatientStatus,
       alternative_name,
       alternative_cpf_cnpj,
+      customer_dob: formattedCustomerDob,
     });
 
     return newCustomer;
