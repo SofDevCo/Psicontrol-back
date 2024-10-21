@@ -1,9 +1,6 @@
 const { User } = require("../models");
 
 const saveTokens = async (name, email, accessToken, refreshToken) => {
-  if (!email) {
-    throw new Error("O email não foi fornecido.");
-  }
 
   try {
     let user = await User.findOne({ where: { user_email: email } });
