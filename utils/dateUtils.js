@@ -1,6 +1,11 @@
 const { format, parseISO } = require("date-fns");
 const { ptBR } = require("date-fns/locale");
 
+
+exports.isValidDate = (date) => {
+  return date instanceof Date && !isNaN(date);
+};
+
 exports.formatDateBrazilian = (date) => {
   if (!date) return "";
   return format(date, "dd/MM/yyyy", { locale: ptBR });
@@ -15,9 +20,17 @@ exports.parseBrazilianDate = (dateString) => {
   const parts = dateString.split("/");
   if (parts.length !== 3) return null;
   const day = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10) - 1;
+  const month = parseInt(parts[1], 10) - 1; 
   const year = parseInt(parts[2], 10);
-  return new Date(year, month, day);
+  
+  const parsedDate = new Date(year, month, day);
+  
+
+  if (!exports.isValidDate(parsedDate)) {
+    return null; 
+  }
+  
+  return parsedDate;
 };
 
 exports.formatDateIso = (date) => {
@@ -27,8 +40,13 @@ exports.formatDateIso = (date) => {
     date = exports.parseBrazilianDate(date);
   }
 
-  if (isNaN(date)) {
-    throw new Error("Data inválida fornecida.");
+  const year = date.getFullYear();
+  if (year < 1900 || year > new Date().getFullYear()) {
+    return ""; 
+  }
+
+  if (!exports.isValidDate(date)) {
+    return ""; 
   }
 
   return format(date, "yyyy-MM-dd", { locale: ptBR });
