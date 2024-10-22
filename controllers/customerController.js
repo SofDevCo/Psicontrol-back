@@ -1,5 +1,5 @@
 const { Customer, User } = require("../models");
-const {formatDateIso } = require("../utils/dateUtils")
+const { formatDateIso } = require("../utils/dateUtils");
 
 exports.upsertCustomer = async (userId, customerData) => {
   const {
@@ -28,7 +28,7 @@ exports.upsertCustomer = async (userId, customerData) => {
       ? false
       : null;
 
-  const formattedCustomerDob = formatDateIso(customer_dob)
+  const formattedCustomerDob = formatDateIso(customer_dob);
 
   if (customer_id) {
     const customer = await Customer.findOne({
@@ -63,7 +63,7 @@ exports.upsertCustomer = async (userId, customerData) => {
       alternative_name,
       alternative_cpf_cnpj,
       customer_dob: formattedCustomerDob,
-      archived:false,
+      archived: false,
     });
 
     return newCustomer;
@@ -94,7 +94,7 @@ exports.getCustomers = async (req, res) => {
     }
 
     const customers = await Customer.findAll({
-      where: { user_id: req.user.user_id, archived:false},
+      where: { user_id: req.user.user_id, archived: false },
     });
 
     res.json(customers);
@@ -122,33 +122,36 @@ exports.deleteCustomer = async (req, res, next) => {
   res.status(200).json({ message: "Cliente deletado com sucesso." });
 };
 
-exports.archiveCustomer = async (req,res) =>{
-  const {customerId} = req.params;
+exports.archiveCustomer = async (req, res) => {
+  const { customerId } = req.params;
   const userId = req.user.user_id;
+  const {archived} = req.body;
 
   const customer = await Customer.findOne({
-    where: {customer_id: customerId, user_id: userId},
+    where: { customer_id: customerId, user_id: userId },
   });
 
-  if(!customer){
-    return res.status(404).json({error: "Cliente não encontrado."})
+  if (!customer) {
+    return res.status(404).json({ error: "Cliente não encontrado." });
   }
 
-  await Customer.update({archived:true});
+  await Customer.update(
+    { archived: archived},
+    { where: { customer_id: customerId, user_id: userId } }
+  );
 
-  res.status(200).json({message:"Cliente arquivado com sucesso."})
-}
+  res.status(200).json({ message: "Cliente arquivado com sucesso." });
+};
 
-exports.getArchivedCustomers = async (req,res) => {
-    const userId = req.user.user_id;
+exports.getArchivedCustomers = async (req, res) => {
+  const userId = req.user.user_id;
 
-    const archivedCustomer = await Customer.findAll({
-      where: {user_id: userId, archived: true},
-    })
+  const archivedCustomer = await Customer.findAll({
+    where: { user_id: userId, archived: true },
+  });
 
-    if(archivedCustomer){
-      return res.status(200).json(archivedCustomer);
-    }
-    res.status(500).send("Erro ao buscar pacientes arquivados.");
-
-}
+  if (archivedCustomer) {
+    return res.status(200).json(archivedCustomer);
+  }
+  res.status(500).send("Erro ao buscar pacientes arquivados.");
+};
