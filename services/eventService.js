@@ -19,7 +19,7 @@ exports.deleteEventById = async (customers_id) => {
     });
     return result;
   } catch (error) {
-    throw error;
+
   }
 };
 
