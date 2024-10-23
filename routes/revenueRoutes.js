@@ -10,6 +10,10 @@ router.get("/expense", revenueController.getExpenseByUserId);
 
 router.get("/entries", revenueController.getEntriesByUserId);
 
+router.get("/entries/month-year", revenueController.getEntriesByMonthAndYear);
+
+router.post("/entries/repeat-last-month", revenueController.repeatLastMonthEntries);
+
 router.delete("/revenue/:id", revenueController.deleteRevenue);
 router.delete("/expense/:id", revenueController.deleteExpense);
 
