@@ -31,6 +31,10 @@ const income = sequelize.define(
       type: DataTypes.DATEONLY,
       allowNull: false,
     },
+    month_year: {  // New field to store month and year
+      type: DataTypes.STRING(7),  // Format MM/YY
+      allowNull: false,
+    },    
     type: {
       type: DataTypes.STRING(10),
       allowNull: false,
