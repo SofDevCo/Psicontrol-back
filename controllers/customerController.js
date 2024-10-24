@@ -1,5 +1,5 @@
 const { Customer, User } = require("../models");
-const { formatDateIso } = require("../utils/dateUtils");
+const { formatDateIso, calculateAge } = require("../utils/dateUtils");
 
 exports.upsertCustomer = async (userId, customerData) => {
   const {
@@ -50,7 +50,8 @@ exports.upsertCustomer = async (userId, customerData) => {
       customer_dob: formattedCustomerDob,
     });
 
-    return customer;
+    const age = calculateAge(formattedCustomerDob);
+    return { customer, age };
   } else {
     const newCustomer = await Customer.create({
       user_id: userId,
@@ -66,7 +67,8 @@ exports.upsertCustomer = async (userId, customerData) => {
       archived: false,
     });
 
-    return newCustomer;
+    const age = calculateAge(formattedCustomerDob);
+    return { newCustomer, age };
   }
 };
 
@@ -110,7 +112,10 @@ exports.getProfileCustomer = async (req, res) => {
   if (!customer) {
     return res.status(404).json({ error: "Cliente não encontrado." });
   }
-  return res.status(200).json(customer);
+
+  const age = calculateAge(customer.customer_dob);
+
+  return res.status(200).json({ ...customer.toJSON(), age });
 };
 
 exports.deleteCustomer = async (req, res, next) => {
