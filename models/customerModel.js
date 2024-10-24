@@ -24,6 +24,7 @@ const Customer = sequelize.define(
     customer_cpf_cnpj: {
       type: DataTypes.STRING(14),
       allowNull: false,
+      defaultValue: false,
     },
     customer_phone: {
       type: DataTypes.STRING(15),
@@ -37,7 +38,7 @@ const Customer = sequelize.define(
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
     },
-    patient_status: {
+    archived: {
       type: DataTypes.BOOLEAN,
       allowNull: true,
     },
