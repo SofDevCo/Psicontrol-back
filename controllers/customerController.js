@@ -1,5 +1,5 @@
 const { Customer, User } = require("../models");
-const { formatDateIso } = require("../utils/dateUtils");
+const { formatDateIso, calculateAge } = require("../utils/dateUtils");
 
 exports.upsertCustomer = async (userId, customerData) => {
   const {
@@ -50,7 +50,8 @@ exports.upsertCustomer = async (userId, customerData) => {
       customer_dob: formattedCustomerDob,
     });
 
-    return customer;
+    const age = calculateAge(formattedCustomerDob);
+    return { customer, age };
   } else {
     const newCustomer = await Customer.create({
       user_id: userId,
@@ -66,7 +67,8 @@ exports.upsertCustomer = async (userId, customerData) => {
       archived: false,
     });
 
-    return newCustomer;
+    const age = calculateAge(formattedCustomerDob);
+    return { newCustomer, age };
   }
 };
 
@@ -86,21 +88,34 @@ exports.editCustomer = async (req, res) => {
 };
 
 exports.getCustomers = async (req, res) => {
-  try {
-    const userId = req.user.user_id;
+  const userId = req.user.user_id;
 
-    if (!userId) {
-      return res.status(401).json({ error: "Usuário não autenticado." });
-    }
-
-    const customers = await Customer.findAll({
-      where: { user_id: req.user.user_id, archived: false },
-    });
-
-    res.json(customers);
-  } catch (error) {
-    res.status(500).send("Erro interno do servidor.");
+  if (!userId) {
+    return res.status(401).json({ error: "Usuário não autenticado." });
   }
+
+  const customers = await Customer.findAll({
+    where: { user_id: req.user.user_id, archived: false },
+  });
+
+  res.json(customers);
+};
+
+exports.getProfileCustomer = async (req, res) => {
+  const { customerId } = req.params;
+  const userId = req.user.user_id;
+
+  const customer = await Customer.findOne({
+    where: { customer_id: customerId, user_id: userId },
+  });
+
+  if (!customer) {
+    return res.status(404).json({ error: "Cliente não encontrado." });
+  }
+
+  const age = calculateAge(customer.customer_dob);
+
+  return res.status(200).json({ ...customer.toJSON(), age });
 };
 
 exports.deleteCustomer = async (req, res, next) => {
@@ -125,7 +140,7 @@ exports.deleteCustomer = async (req, res, next) => {
 exports.archiveCustomer = async (req, res) => {
   const { customerId } = req.params;
   const userId = req.user.user_id;
-  const {archived} = req.body;
+  const { archived } = req.body;
 
   const customer = await Customer.findOne({
     where: { customer_id: customerId, user_id: userId },
@@ -136,7 +151,7 @@ exports.archiveCustomer = async (req, res) => {
   }
 
   await Customer.update(
-    { archived: archived},
+    { archived: archived },
     { where: { customer_id: customerId, user_id: userId } }
   );
 
