@@ -84,11 +84,10 @@ const revenueController = {
       });
   
       if (existingEntries) {
-        // Se já existirem entradas, bloquear a repetição
-        return res.status(400).json({
-          message: "Já existem entradas no mês selecionado. Não é possível repetir.",
-        });
+        // Apenas bloqueia a operação, mas não envia a mensagem de erro
+        return res.status(400).end(); // Retorna apenas o status sem mensagem
       }
+      
   
       // Calcula o mês anterior ao mês selecionado
       const lastMonthDate = subMonths(selectedDate, 1); // Data do mês anterior
