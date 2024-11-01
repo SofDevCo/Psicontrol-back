@@ -6,6 +6,7 @@ const cors = require("cors");
 const { oauth2Client, authUrl } = require("./config/oauth2");
 const eventRoutes = require("./routes/eventRoutes");
 const revenueRoutes = require("./routes/revenueRoutes"); // Importa as rotas de receitas e despesas
+const userRoutes = require("./routes/userRoutes");
 const {
   handleOAuth2Callback,
   initiateGoogleAuth,
@@ -36,6 +37,7 @@ app.get("/google", initiateGoogleAuth);
 app.get("/oauth2callback", handleOAuth2Callback);
 app.use("/events", verifyToken, eventRoutes);
 app.use("/income", verifyToken, revenueRoutes);
+app.use("/user", verifyToken, userRoutes);
 app.get("/auth/google/callback", handleOAuth2Callback);
 require("./cronjob/cronJob");
 
