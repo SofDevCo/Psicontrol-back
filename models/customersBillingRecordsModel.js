@@ -14,7 +14,7 @@ const CustomersBillingRecords = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: Customer,
+        model: "Customer",
         key: "customer_id",
       },
     },
