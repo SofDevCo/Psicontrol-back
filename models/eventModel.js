@@ -26,14 +26,6 @@ const Event = sequelize.define(
         key: "customer_id",
       },
     },
-    montr_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: "users",
-        key: "user_id",
-      },
-    },
     event_name: {
       type: DataTypes.STRING,
       allowNull: true,
