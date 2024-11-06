@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const eventController = require("../controllers/eventController");
 const customerController = require("../controllers/customerController");
+const unmatchedPatientsController = require("../controllers/unmatchedPatientsController");
 const { verifyToken } = require("../middleware/authMiddleware");
 
 router.get("/select-calendar", (req, res) => {
@@ -14,6 +15,7 @@ router.post("/sync-calendar", eventController.syncCalendar);
 router.post("/sync-calendar/:calendarId", eventController.syncCalendar);
 router.get("/get-events/:calendarId", eventController.getEventsByCalendar);
 router.get("/get-events", eventController.getEvents);
+router.get("/unmatched-patients", verifyToken, unmatchedPatientsController.getUnmatchedPatients);
 router.get("/calendars", eventController.listCalendars);
 router.delete(
   "/cancel/:google_event_id/:calendarId",
