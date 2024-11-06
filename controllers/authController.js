@@ -1,5 +1,6 @@
 const { google } = require("googleapis");
-const { User, Calendar, Event } = require("../models");
+const { User, Calendar, Event, Customer } = require("../models");
+const Fuse = require("fuse.js");
 const { listCalendars } = require("../services/calendarService");
 const { oauth2Client, authUrl } = require("../config/oauth2");
 const { saveTokens } = require("./tokenController");
@@ -51,14 +52,17 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
 
     for (const calendar of calendars) {
       const calendarId = calendar.id;
-
-   
-
       const dbCalendar = await Calendar.findOne({
         where: { calendar_id: calendarId },
       });
 
+      console.log("Access Token recebido:", accessToken);
       const user = await User.findOne({ where: { access_token: accessToken } });
+
+      if (!user) {
+        console.error("Usuário não encontrado para o accessToken fornecido");
+        return;
+      }
 
       if (!dbCalendar) {
         await Calendar.create({
@@ -69,6 +73,14 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
       }
 
       const events = await fetchGoogleCalendarEvents(accessToken, calendarId);
+      const patients = await Customer.findAll();
+
+      const fuse = new Fuse(patients, {
+        keys: ["customer_name"],
+        threshold: 0.3,
+      });
+
+      const unmatchedEvents = [];
 
       for (const event of events) {
         const eventExists = await Event.findOne({
@@ -97,35 +109,61 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
           endTime = "23:59";
         }
 
-        if (eventExists) {
-          await Event.update(
-            {
+        const result = fuse.search(event.summary.trim());
+        const bestMatch = result.length > 0 ? result[0].item : null;
+        const customerId = bestMatch ? bestMatch.customer_id : null;
+
+        console.log("Busca por:", event.summary.trim());
+        console.log("ID do Cliente Correspondente:", customerId);
+        console.log("Resultado da correspondência:", result);
+
+        if (customerId) {
+          console.log(
+            `Sincronizando evento ${event.summary} com o customer_id ${customerId}`
+          );
+
+          if (eventExists) {
+            await Event.update(
+              {
+                event_name: event.summary,
+                date: startDate,
+                status: event.status,
+                calendar_id: calendarId,
+                start_time: startTime,
+                end_time: endTime,
+                user_id: user.user_id,
+                customer_id: customerId,
+              },
+              { where: { google_event_id: event.id } }
+            );
+          } else {
+            await Event.create({
               event_name: event.summary,
               date: startDate,
+              google_event_id: event.id,
               status: event.status,
               calendar_id: calendarId,
               start_time: startTime,
               end_time: endTime,
               user_id: user.user_id,
-            },
-            { where: { google_event_id: event.id } }
-          );
+              customer_id: customerId,
+            });
+          }
         } else {
-          await Event.create({
+          unmatchedEvents.push({
             event_name: event.summary,
             date: startDate,
-            google_event_id: event.id,
-            status: event.status,
-            calendar_id: calendarId,
-            start_time: startTime,
-            end_time: endTime,
-            user_id: user.user_id,
           });
         }
       }
+
+      global.unmatchedEventsCache = unmatchedEvents;
+
       await deleteNonexistentGoogleEvents(events, calendarId);
     }
-  } catch (error) {}
+  } catch (error) {
+    console.error(error);
+  }
 };
 
 const deleteNonexistentGoogleEvents = async (events, calendarId) => {
