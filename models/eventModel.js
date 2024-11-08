@@ -20,7 +20,7 @@ const Event = sequelize.define(
     },
     customer_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: "Customer",
         key: "customer_id",
