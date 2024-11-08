@@ -10,29 +10,21 @@ const {
 } = require("../services/getTokenService");
 
 const syncAllCalendars = async () => {
-  try {
-    const users = await getAllAccessToken();
+  const users = await getAllAccessToken();
 
-    for (const user of users) {
-      const { user_id, refresh_token: refreshToken } = user;
+  for (const user of users) {
+    const { user_id, refresh_token: refreshToken } = user;
 
-      if (!refreshToken) {
-        continue;
-      }
+    if (refreshToken) {
+      const newAccessToken = await refreshAccessToken(refreshToken);
+      await updateAccessToken(user_id, newAccessToken);
 
-      try {
-        const newAccessToken = await refreshAccessToken(refreshToken);
-        await updateAccessToken(user_id, newAccessToken);
-
-        await fetchGoogleCalendars(newAccessToken);
-
-        await syncGoogleCalendarWithDatabase(newAccessToken);
-      } catch (error) {}
+      await syncGoogleCalendarWithDatabase(newAccessToken); 
     }
-  } catch (error) {}
+  }
 };
 
-cron.schedule("0 * * * *", async () => {
+cron.schedule("5 * * * *", async () => {
   try {
     await syncAllCalendars();
   } catch (error) {}
