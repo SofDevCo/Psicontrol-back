@@ -56,13 +56,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
         where: { calendar_id: calendarId },
       });
 
-      console.log("Access Token recebido:", accessToken);
       const user = await User.findOne({ where: { access_token: accessToken } });
-
-      if (!user) {
-        console.error("Usuário não encontrado para o accessToken fornecido");
-        return;
-      }
 
       if (!dbCalendar) {
         await Calendar.create({
@@ -113,15 +107,11 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
         const bestMatch = result.length > 0 ? result[0].item : null;
         const customerId = bestMatch ? bestMatch.customer_id : null;
 
-        console.log("Busca por:", event.summary.trim());
-        console.log("ID do Cliente Correspondente:", customerId);
-        console.log("Resultado da correspondência:", result);
+        // console.log("Busca por:", event.summary.trim());
+        // console.log("ID do Cliente Correspondente:", customerId);
+        // console.log("Resultado da correspondência:", result);
 
         if (customerId) {
-          console.log(
-            `Sincronizando evento ${event.summary} com o customer_id ${customerId}`
-          );
-
           if (eventExists) {
             await Event.update(
               {
@@ -150,9 +140,23 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
             });
           }
         } else {
+          if (!eventExists) {
+            await Event.create({
+              event_name: event.summary,
+              date: startDate,
+              google_event_id: event.id,
+              status: event.status,
+              calendar_id: calendarId,
+              start_time: startTime,
+              end_time: endTime,
+              user_id: user.user_id,
+              customer_id: null, 
+            });
+          }
           unmatchedEvents.push({
             event_name: event.summary,
             date: startDate,
+            user_id: user.user_id,
           });
         }
       }
@@ -197,7 +201,7 @@ async function handleOAuth2Callback(req, res) {
 
     const calendars = await listCalendars();
 
-
+    
     let oauth2 = google.oauth2({
       auth: oauth2Client,
       version: "v2",
@@ -212,25 +216,16 @@ async function handleOAuth2Callback(req, res) {
       });
     }
 
-    let user = await User.findOne({ where: { user_email: data.email } });
-    if (!user) {
-      user = await User.create({
-        user_email: data.email,
-        user_name: data.name,
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
-      });
-    } else {
-      await saveTokens(
-        data.name,
-        data.email,
-        tokens.accessToken,
-        tokens.refresh_token
-      );
-    }
+    await saveTokens(
+      data.name,
+      data.email,
+      tokens.access_token,
+      tokens.refresh_token
+    );
 
     const authenticationToken = bcrypt.hashSync(new Date().toISOString(), 10);
 
+    const user = await User.findOne({ where: { user_email: data.email } });
     user.autentication_token = authenticationToken;
     await user.save();
 
