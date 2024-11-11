@@ -1,4 +1,4 @@
-const { Customer, User } = require("../models");
+const { Customer, User, Event } = require("../models");
 const { formatDateIso, calculateAge } = require("../utils/dateUtils");
 
 exports.upsertCustomer = async (userId, customerData) => {
@@ -169,4 +169,22 @@ exports.getArchivedCustomers = async (req, res) => {
     return res.status(200).json(archivedCustomer);
   }
   res.status(500).send("Erro ao buscar pacientes arquivados.");
+};
+
+exports.linkCustomerToEvent = async (req, res) => {
+  const { eventId, customer_id } = req.body; 
+  const userId = req.user.user_id;
+
+  const event = await Event.findOne({
+    where: { customers_id: eventId, user_id: userId }, 
+  });
+
+  if (!event) {
+    return res.status(404).json({ error: "Evento não encontrado." });
+  }
+
+  event.customer_id = customer_id;
+  await event.save();
+
+  res.status(200).json({ message: "Paciente vinculado com sucesso ao evento!" });
 };
