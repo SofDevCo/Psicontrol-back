@@ -4,24 +4,19 @@ const { syncGoogleCalendarWithDatabase } = require("./authController");
 
 
 exports.getUnmatchedPatients = async (req, res) => {
-    try {
-      const unmatchedEvents = await Event.findAll({
-        where: {
-          user_id: req.user.user_id,
-          customer_id: null, 
-        },
-        attributes: ['event_name', 'date'], 
-      });
-  
+  const unmatchedEvents = await Event.findAll({
+    where: {
+      user_id: req.user.user_id,
+      customer_id: null,
+    },
+    attributes: ['customers_id', 'event_name', 'date'],
+  });
 
-      const response = unmatchedEvents.map(event => ({
-        name: event.event_name,
-        date: event.date,
-      }));
-  
-      res.json(response);
-    } catch (error) {
-      console.error("Erro ao buscar pacientes não encontrados:", error);
-      res.status(500).json({ message: "Erro ao buscar pacientes não encontrados." });
-    }
-  };
+  const response = unmatchedEvents.map(event => ({
+    customers_id: event.customers_id,
+    name: event.event_name,
+    date: event.date,
+  }));
+
+  res.json(response);
+};
