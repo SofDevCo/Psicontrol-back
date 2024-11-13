@@ -101,9 +101,30 @@ exports.getCustomers = async (req, res) => {
 
   const customers = await Customer.findAll({
     where: { user_id: req.user.user_id, archived: false },
+    include: [
+      {
+        model: CustomersBillingRecords,
+        attributes: ["consultation_days"],
+        required: false,
+      },
+    ],
   });
 
-  res.json(customers);
+  const customersWithConsultationDays = customers.map((customer) => {
+    const customerData = customer.toJSON();
+
+    customerData.consultation_days = customerData.CustomersBillingRecords
+      && customerData.CustomersBillingRecords[0]?.consultation_days
+      ? customerData.CustomersBillingRecords[0].consultation_days
+          .split(", ")
+          .map((date) => date.split("-")[2]) 
+          .join(", ")
+      : null;
+
+    return customerData;
+  });
+
+  res.json(customersWithConsultationDays);
 };
 
 exports.getProfileCustomer = async (req, res) => {
@@ -193,3 +214,4 @@ exports.linkCustomerToEvent = async (req, res) => {
 
   res.status(200).json({ message: "Paciente vinculado com sucesso ao evento!" });
 };
+
