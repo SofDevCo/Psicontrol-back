@@ -30,6 +30,10 @@ const CustomersBillingRecords = sequelize.define(
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
     },
+    consultation_days:{
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
     payment_amount: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
