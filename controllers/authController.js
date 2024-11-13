@@ -4,6 +4,7 @@ const Fuse = require("fuse.js");
 const { listCalendars } = require("../services/calendarService");
 const { oauth2Client, authUrl } = require("../config/oauth2");
 const { saveTokens } = require("./tokenController");
+const updateConsultationDays = require("../controllers/eventController");
 const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 const bcrypt = require("bcrypt");
 
@@ -138,6 +139,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
               user_id: user.user_id,
               customer_id: customerId,
             });
+            await updateConsultationDays(customerId);
           }
         } else {
           if (!eventExists) {
