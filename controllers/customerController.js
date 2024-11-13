@@ -1,4 +1,4 @@
-const { Customer, User, Event } = require("../models");
+const { Customer, User, Event, CustomersBillingRecords } = require("../models");
 const { formatDateIso, calculateAge } = require("../utils/dateUtils");
 
 exports.upsertCustomer = async (userId, customerData) => {
@@ -65,6 +65,11 @@ exports.upsertCustomer = async (userId, customerData) => {
       alternative_cpf_cnpj,
       customer_dob: formattedCustomerDob,
       archived: false,
+    });
+
+    await CustomersBillingRecords.create({
+      customer_id: newCustomer.customer_id,
+      consultation_fee: consultation_fee || 0.0,
     });
 
     const age = calculateAge(formattedCustomerDob);
