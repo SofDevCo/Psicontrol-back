@@ -113,13 +113,15 @@ exports.getCustomers = async (req, res) => {
   const customersWithConsultationDays = customers.map((customer) => {
     const customerData = customer.toJSON();
 
-    customerData.consultation_days = customerData.CustomersBillingRecords
+    const consultationDays = customerData.CustomersBillingRecords
       && customerData.CustomersBillingRecords[0]?.consultation_days
       ? customerData.CustomersBillingRecords[0].consultation_days
           .split(", ")
           .map((date) => date.split("-")[2]) 
-          .join(", ")
-      : null;
+      : [];
+
+    customerData.consultation_days = consultationDays.join(", ");
+    customerData.num_consultations = consultationDays.length;
 
     return customerData;
   });
@@ -198,11 +200,11 @@ exports.getArchivedCustomers = async (req, res) => {
 };
 
 exports.linkCustomerToEvent = async (req, res) => {
-  const { eventId, customer_id } = req.body; 
+  const { eventId, customer_id } = req.body;
   const userId = req.user.user_id;
 
   const event = await Event.findOne({
-    where: { customers_id: eventId, user_id: userId }, 
+    where: { customers_id: eventId, user_id: userId },
   });
 
   if (!event) {
@@ -212,6 +214,7 @@ exports.linkCustomerToEvent = async (req, res) => {
   event.customer_id = customer_id;
   await event.save();
 
-  res.status(200).json({ message: "Paciente vinculado com sucesso ao evento!" });
+  res
+    .status(200)
+    .json({ message: "Paciente vinculado com sucesso ao evento!" });
 };
-
