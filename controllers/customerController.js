@@ -123,6 +123,9 @@ exports.getCustomers = async (req, res) => {
     customerData.consultation_days = consultationDays.join(", ");
     customerData.num_consultations = consultationDays.length;
 
+    const consultationFee = parseFloat(customerData.CustomersBillingRecords[0]?.consultation_fee || 0.01);
+    customerData.total_consultation_fee = (consultationFee * customerData.num_consultations).toFixed(2);
+
     return customerData;
   });
 
