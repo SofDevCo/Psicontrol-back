@@ -4,7 +4,7 @@ const Fuse = require("fuse.js");
 const { listCalendars } = require("../services/calendarService");
 const { oauth2Client, authUrl } = require("../config/oauth2");
 const { saveTokens } = require("./tokenController");
-const updateConsultationDays = require("../controllers/eventController");
+const { updateConsultationDays } = require("../utils/updateConsultationDays");
 const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 const bcrypt = require("bcrypt");
 
@@ -108,9 +108,6 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
         const bestMatch = result.length > 0 ? result[0].item : null;
         const customerId = bestMatch ? bestMatch.customer_id : null;
 
-        // console.log("Busca por:", event.summary.trim());
-        // console.log("ID do Cliente Correspondente:", customerId);
-        // console.log("Resultado da correspondência:", result);
 
         if (customerId) {
           if (eventExists) {
@@ -139,8 +136,8 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
               user_id: user.user_id,
               customer_id: customerId,
             });
-            await updateConsultationDays(customerId);
           }
+          await updateConsultationDays(customerId); 
         } else {
           if (!eventExists) {
             await Event.create({
