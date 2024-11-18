@@ -114,11 +114,11 @@ exports.getCustomers = async (req, res) => {
     const customerData = customer.toJSON();
 
     const consultationDays = customerData.CustomersBillingRecords
-      && customerData.CustomersBillingRecords[0]?.consultation_days
-      ? customerData.CustomersBillingRecords[0].consultation_days
-          .split(", ")
-          .map((date) => date.split("-")[2]) 
-      : [];
+    && customerData.CustomersBillingRecords[0]?.consultation_days
+    ? customerData.CustomersBillingRecords[0].consultation_days
+        .split(", ")
+        .map((day) => day.trim())
+    : [];
 
     customerData.consultation_days = consultationDays.join(", ");
     customerData.num_consultations = consultationDays.length;
