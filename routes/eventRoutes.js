@@ -3,11 +3,13 @@ const router = express.Router();
 const eventController = require("../controllers/eventController");
 const customerController = require("../controllers/customerController");
 const unmatchedPatientsController = require("../controllers/unmatchedPatientsController");
+const authController = require("../controllers/authController")
 const { verifyToken } = require("../middleware/authMiddleware");
 
 router.get("/select-calendar", (req, res) => {
   res.redirect("http://localhost:3001/select-calendar");
 });
+router.get("/check-calendars", authController.checkAndHandleCalendars);
 
 // Endpoints para eventos
 router.post("/create-event", eventController.createEvent);
