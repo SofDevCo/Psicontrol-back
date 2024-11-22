@@ -104,7 +104,7 @@ exports.getCustomers = async (req, res) => {
     include: [
       {
         model: CustomersBillingRecords,
-        attributes: ["consultation_days"],
+        attributes: ["consultation_days", "consultation_fee"],
         required: false,
       },
     ],
@@ -113,18 +113,24 @@ exports.getCustomers = async (req, res) => {
   const customersWithConsultationDays = customers.map((customer) => {
     const customerData = customer.toJSON();
 
-    const consultationDays = customerData.CustomersBillingRecords
-    && customerData.CustomersBillingRecords[0]?.consultation_days
-    ? customerData.CustomersBillingRecords[0].consultation_days
-        .split(", ")
-        .map((day) => day.trim())
-    : [];
+    const consultationDays =
+      customerData.CustomersBillingRecords &&
+      customerData.CustomersBillingRecords[0]?.consultation_days
+        ? customerData.CustomersBillingRecords[0].consultation_days
+            .split(", ")
+            .map((day) => day.trim())
+        : [];
 
     customerData.consultation_days = consultationDays.join(", ");
     customerData.num_consultations = consultationDays.length;
 
-    const consultationFee = parseFloat(customerData.CustomersBillingRecords[0]?.consultation_fee || 0.01);
-    customerData.total_consultation_fee = (consultationFee * customerData.num_consultations).toFixed(2);
+    const consultationFee = customerData.CustomersBillingRecords[0]
+      ?.consultation_fee
+      ? parseFloat(customerData.CustomersBillingRecords[0].consultation_fee)
+      : 0;
+    customerData.total_consultation_fee = (
+      consultationFee * customerData.num_consultations
+    ).toFixed(2);
 
     return customerData;
   });
