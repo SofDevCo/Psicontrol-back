@@ -2,6 +2,8 @@ const { google } = require("googleapis");
 const { User, Calendar, Event, Customer } = require("../models");
 const Fuse = require("fuse.js");
 const { listCalendars } = require("../services/calendarService");
+const { format, utcToZonedTime, zonedTimeToUtc } = require("date-fns-tz");
+const { parseISO, getDate } = require("date-fns");
 const { oauth2Client, authUrl } = require("../config/oauth2");
 const { saveTokens } = require("./tokenController");
 const { updateConsultationDays } = require("../utils/updateConsultationDays");
@@ -87,17 +89,15 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
           endTime = null;
 
         if (event.start && event.start.dateTime) {
-          startDate = event.start.dateTime.split("T")[0];
-          startTime = event.start.dateTime
-            .split("T")[1]
-            .split(":")
-            .slice(0, 2)
-            .join(":");
-          endTime = event.end.dateTime
-            .split("T")[1]
-            .split(":")
-            .slice(0, 2)
-            .join(":");
+          const utcStart = zonedTimeToUtc(
+            event.start.dateTime,
+            CLIENT_TIMEZONE
+          );
+          const utcEnd = zonedTimeToUtc(event.end.dateTime, CLIENT_TIMEZONE);
+
+          startDate = format(utcStart, "yyyy-MM-dd");
+          startTime = format(utcStart, "HH:mm");
+          endTime = format(utcEnd, "HH:mm");
         } else if (event.start && event.start.date) {
           startDate = event.start.date;
           startTime = "00:00";
@@ -107,7 +107,6 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
         const result = fuse.search(event.summary.trim());
         const bestMatch = result.length > 0 ? result[0].item : null;
         const customerId = bestMatch ? bestMatch.customer_id : null;
-
 
         if (customerId) {
           if (eventExists) {
@@ -137,7 +136,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
               customer_id: customerId,
             });
           }
-          await updateConsultationDays(customerId); 
+          await updateConsultationDays(customerId);
         } else {
           if (!eventExists) {
             await Event.create({
@@ -149,7 +148,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
               start_time: startTime,
               end_time: endTime,
               user_id: user.user_id,
-              customer_id: null, 
+              customer_id: null,
             });
           }
           unmatchedEvents.push({
@@ -200,7 +199,6 @@ async function handleOAuth2Callback(req, res) {
 
     const calendars = await listCalendars();
 
-    
     let oauth2 = google.oauth2({
       auth: oauth2Client,
       version: "v2",
