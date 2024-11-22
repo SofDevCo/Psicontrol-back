@@ -191,6 +191,8 @@ async function handleOAuth2Callback(req, res) {
       );
     }
 
+    console.log("user aqui: ", user)
+
     const authenticationToken = bcrypt.hashSync(new Date().toISOString(), 10);
 
     user.autentication_token = authenticationToken;
@@ -204,10 +206,55 @@ async function handleOAuth2Callback(req, res) {
   }
 }
 
+const checkAndHandleCalendars = async (req, res) => {
+  try {
+    // Recupera o token de autenticação do cabeçalho
+    const authenticationToken = req.headers.authorization?.split(" ")[1];
+
+    if (!authenticationToken) {
+      return res.status(401).json({ message: "Token de autenticação ausente." });
+    }
+
+    // Busca o usuário com base no token de autenticação
+    const user = await User.findOne({ where: { autentication_token: authenticationToken } });
+
+    if (!user) {
+      return res.status(401).json({ message: "Usuário não encontrado." });
+    }
+
+    console.log("Usuário encontrado no checkAndHandleCalendars:", user);
+
+    // Busca os calendários do usuário no banco de dados
+    const userCalendars = await Calendar.findAll({ where: { user_id: user.user_id } });
+
+    if (userCalendars.length > 0) {
+      // Redireciona para criar eventos se houver calendários
+      const ids = userCalendars.map((calendar) => calendar.calendar_id);
+      return res.json({
+        redirect: `/create-event-form?calendarIds=${ids.join(",")}`,
+      });
+    }
+
+    // Redireciona para seleção de calendários se não houver
+    return res.json({
+      redirect: `/select-calendar`,
+    });
+  } catch (error) {
+    console.error("Erro ao verificar calendários:", error);
+    res.status(500).json({ message: "Erro ao verificar calendários." });
+  }
+};
+
+
+
+
+
+
 module.exports = {
   handleOAuth2Callback,
   initiateGoogleAuth,
   syncGoogleCalendarWithDatabase,
   fetchGoogleCalendarEvents,
   fetchGoogleCalendars,
+  checkAndHandleCalendars,
 };
