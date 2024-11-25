@@ -220,10 +220,9 @@ async function handleOAuth2Callback(req, res) {
       tokens.refresh_token
     );
 
-    console.log("user aqui: ", user)
-
     const authenticationToken = bcrypt.hashSync(new Date().toISOString(), 10);
 
+    const user = await User.findOne({ where: { user_email: data.email } });
     const user = await User.findOne({ where: { user_email: data.email } });
     user.autentication_token = authenticationToken;
     await user.save();
@@ -252,7 +251,6 @@ const checkAndHandleCalendars = async (req, res) => {
       return res.status(401).json({ message: "Usuário não encontrado." });
     }
 
-    console.log("Usuário encontrado no checkAndHandleCalendars:", user);
 
     // Busca os calendários do usuário no banco de dados
     const userCalendars = await Calendar.findAll({ where: { user_id: user.user_id } });
