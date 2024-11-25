@@ -38,7 +38,7 @@ exports.upsertCustomer = async (userId, customerData) => {
       return res.status(401).json({ error: "Usuário não autenticado." });
     }
 
-    await customer.update({
+    await customer.update({ 
       customer_name,
       customer_cpf_cnpj,
       customer_phone,
@@ -110,6 +110,9 @@ exports.getCustomers = async (req, res) => {
     ],
   });
 
+  let totalConsultations = 0;
+  let totalRevenue = 0;
+
   const customersWithConsultationDays = customers.map((customer) => {
     const customerData = customer.toJSON();
 
@@ -132,10 +135,17 @@ exports.getCustomers = async (req, res) => {
       consultationFee * customerData.num_consultations
     ).toFixed(2);
 
+    totalConsultations += customerData.num_consultations;
+    totalRevenue += parseFloat(customerData.total_consultation_fee);
+
     return customerData;
   });
 
-  res.json(customersWithConsultationDays);
+  res.json({
+    customers: customersWithConsultationDays,
+    totalConsultations,
+    totalRevenue: parseFloat(totalRevenue).toFixed(2),
+  });
 };
 
 exports.getProfileCustomer = async (req, res) => {
