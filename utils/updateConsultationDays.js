@@ -10,29 +10,35 @@ const updateConsultationDays = async (customerId) => {
     attributes: ["date"],
   });
 
-  if (events.length === 0) {
-    return;
+  const daysByMonthYear = events.reduce((acc, event) => {
+    const [year, month] = event.date.split("-");
+    const monthYear = `${year}-${month}`;
+    if (!acc[monthYear]) acc[monthYear] = [];
+    acc[monthYear].push(event.date);
+    return acc;
+  }, {});
+
+  for (const [monthYear, days] of Object.entries(daysByMonthYear)) {
+    const numConsultations = days.length;
+
+    const existingRecord = await CustomersBillingRecords.findOne({
+      where: { customer_id: customerId, month_and_year: monthYear },
+    });
+
+    if (existingRecord) {
+      await existingRecord.update({
+        consultation_days: days.join(", "),
+        num_consultations: numConsultations,
+      });
+    } else {
+      await CustomersBillingRecords.create({
+        customer_id: customerId,
+        month_and_year: monthYear,
+        consultation_days: days.join(", "),
+        num_consultations: numConsultations,
+      });
+    }
   }
-
-  const days = [
-    ...new Set(
-      events.map((event) => {
-        console.log("Processando evento:", event.date);
-
-        const day = getDate(parseISO(event.date));
-        console.log("Dia extraído:", day);
-
-        return day;
-      })
-    ),
-  ]
-    .sort((a, b) => a - b)
-    .join(", ");
-
-  await CustomersBillingRecords.update(
-    { consultation_days: days },
-    { where: { customer_id: customerId } }
-  );
 };
 
 const recalculateAllConsultationDays = async () => {
