@@ -52,8 +52,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
     for (const calendar of calendars) {
       const calendarId = calendar.id;
 
-   
-
+      // Verificar se o calendário já existe no banco de dados
       const dbCalendar = await Calendar.findOne({
         where: { calendar_id: calendarId },
       });
@@ -65,6 +64,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
           calendar_id: calendarId,
           calendar_name: calendar.summary,
           user_id: user.user_id,
+          enabled: false, // Calendários novos são criados desativados
         });
       }
 
@@ -196,45 +196,32 @@ async function handleOAuth2Callback(req, res) {
 
 const checkAndHandleCalendars = async (req, res) => {
   try {
-    // Recupera o token de autenticação do cabeçalho
-    const authenticationToken = req.headers.authorization?.split(" ")[1];
+    const userId = req.user?.user_id;
 
-    if (!authenticationToken) {
-      return res.status(401).json({ message: "Token de autenticação ausente." });
+    if (!userId) {
+      return res.status(401).json({ error: "Usuário não autenticado." });
     }
 
-    // Busca o usuário com base no token de autenticação
-    const user = await User.findOne({ where: { autentication_token: authenticationToken } });
+    const enabledCalendars = await Calendar.findAll({
+      where: { user_id: userId, enabled: true },
+    });
 
-    if (!user) {
-      return res.status(401).json({ message: "Usuário não encontrado." });
+    if (!enabledCalendars || enabledCalendars.length === 0) {
+      console.log("Nenhum calendário habilitado. Redirecionando para seleção.");
+      return res.json({ redirect: "/select-calendar" });
     }
 
+    const calendarIds = enabledCalendars.map((calendar) => calendar.calendar_id);
+    console.log("Calendários habilitados encontrados:", calendarIds);
 
-    // Busca os calendários do usuário no banco de dados
-    const userCalendars = await Calendar.findAll({ where: { user_id: user.user_id } });
-
-    if (userCalendars.length > 0) {
-      // Redireciona para criar eventos se houver calendários
-      const ids = userCalendars.map((calendar) => calendar.calendar_id);
-      return res.json({
-        redirect: `/create-event-form?calendarIds=${ids.join(",")}`,
-      });
-    }
-
-    // Redireciona para seleção de calendários se não houver
     return res.json({
-      redirect: `/select-calendar`,
+      redirect: `/create-event-form?calendarIds=${calendarIds.join(",")}`,
     });
   } catch (error) {
     console.error("Erro ao verificar calendários:", error);
-    res.status(500).json({ message: "Erro ao verificar calendários." });
+    res.status(500).json({ error: "Erro interno ao verificar calendários." });
   }
 };
-
-
-
-
 
 
 module.exports = {
