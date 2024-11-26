@@ -5,7 +5,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const { oauth2Client, authUrl } = require("./config/oauth2");
 const eventRoutes = require("./routes/eventRoutes");
-const revenueRoutes = require("./routes/revenueRoutes"); // Importa as rotas de receitas e despesas
+const revenueRoutes = require("./routes/revenueRoutes"); 
 const userRoutes = require("./routes/userRoutes");
 const dashBoardRoutes = require("./routes/dashBoardRoutes");
 const {
@@ -22,6 +22,8 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 //app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
