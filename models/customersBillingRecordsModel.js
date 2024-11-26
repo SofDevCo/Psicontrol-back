@@ -19,7 +19,7 @@ const CustomersBillingRecords = sequelize.define(
       },
     },
     month_and_year: {
-      type: DataTypes.DATEONLY,
+      type: DataTypes.STRING,
       allowNull: true,
     },
     total_consultation_fee: {
