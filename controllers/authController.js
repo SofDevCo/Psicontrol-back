@@ -9,6 +9,7 @@ const { saveTokens } = require("./tokenController");
 const { updateConsultationDays } = require("../utils/updateConsultationDays");
 const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 const bcrypt = require("bcrypt");
+const CLIENT_TIMEZONE = 'America/Sao_Paulo';
 
 const fetchGoogleCalendars = async (accessToken) => {
   oauth2Client.setCredentials({ access_token: accessToken });
