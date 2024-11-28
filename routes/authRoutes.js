@@ -5,8 +5,6 @@ const {
   authUrl,
   initiateGoogleAuth,
 } = require("../controllers/authController");
-const { verifyToken } = require("../middleware/authMiddleware");
-const { getCustomers } = require("../controllers/customerController");
 
 router.get("/", (req, res) => {
   res.send(`
