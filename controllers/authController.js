@@ -2,14 +2,13 @@ const { google } = require("googleapis");
 const { User, Calendar, Event, Customer } = require("../models");
 const Fuse = require("fuse.js");
 const { listCalendars } = require("../services/calendarService");
-const { format, utcToZonedTime, zonedTimeToUtc } = require("date-fns-tz");
-const { parseISO, getDate } = require("date-fns");
+const { parseISO, format } = require("date-fns");
 const { oauth2Client, authUrl } = require("../config/oauth2");
 const { saveTokens } = require("./tokenController");
 const { updateConsultationDays } = require("../utils/updateConsultationDays");
 const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 const bcrypt = require("bcrypt");
-const CLIENT_TIMEZONE = 'America/Sao_Paulo';
+const CLIENT_TIMEZONE = "America/Sao_Paulo";
 
 const fetchGoogleCalendars = async (accessToken) => {
   oauth2Client.setCredentials({ access_token: accessToken });
@@ -69,7 +68,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
           calendar_id: calendarId,
           calendar_name: calendar.summary,
           user_id: user.user_id,
-          enabled: false, // Calendários novos são criados desativados
+          enabled: false,
         });
       }
 
@@ -93,19 +92,29 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
           endTime = null;
 
         if (event.start && event.start.dateTime) {
-          const utcStart = zonedTimeToUtc(
-            event.start.dateTime,
-            CLIENT_TIMEZONE
-          );
-          const utcEnd = zonedTimeToUtc(event.end.dateTime, CLIENT_TIMEZONE);
+          const dateTime = event.start.dateTime;
+          if (dateTime) {
+            startDate = format(parseISO(dateTime), "dd"); 
+            startTime = dateTime
+              .split("T")[1] 
+              .split(":")
+              .slice(0, 2)
+              .join(":");
 
-          startDate = format(utcStart, "yyyy-MM-dd");
-          startTime = format(utcStart, "HH:mm");
-          endTime = format(utcEnd, "HH:mm");
+            if (event.end && event.end.dateTime) {
+              endTime = event.end.dateTime
+                .split("T")[1]
+                .split(":")
+                .slice(0, 2)
+                .join(":");
+            } else {
+              endTime = startTime;
+            }
+          }
         } else if (event.start && event.start.date) {
           startDate = event.start.date;
-          startTime = "00:00";
-          endTime = "23:59";
+          startTime = null;
+          endTime = null;
         }
 
         const result = fuse.search(event.summary.trim());
@@ -256,7 +265,9 @@ const checkAndHandleCalendars = async (req, res) => {
       return res.json({ redirect: "/select-calendar" });
     }
 
-    const calendarIds = enabledCalendars.map((calendar) => calendar.calendar_id);
+    const calendarIds = enabledCalendars.map(
+      (calendar) => calendar.calendar_id
+    );
     console.log("Calendários habilitados encontrados:", calendarIds);
 
     return res.json({
@@ -267,7 +278,6 @@ const checkAndHandleCalendars = async (req, res) => {
     res.status(500).json({ error: "Erro interno ao verificar calendários." });
   }
 };
-
 
 module.exports = {
   handleOAuth2Callback,

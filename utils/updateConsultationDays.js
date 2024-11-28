@@ -1,8 +1,5 @@
-const { zonedTimeToUtc, formatInTimeZone } = require("date-fns-tz");
-const { getDate, parseISO, format } = require("date-fns");
+const { format, parseISO } = require("date-fns");
 const { Event, CustomersBillingRecords } = require("../models");
-
-const CLIENT_TIMEZONE = "America/Sao_Paulo";
 
 const updateConsultationDays = async (customerId) => {
   const events = await Event.findAll({
@@ -14,7 +11,10 @@ const updateConsultationDays = async (customerId) => {
     const [year, month] = event.date.split("-");
     const monthYear = `${year}-${month}`;
     if (!acc[monthYear]) acc[monthYear] = [];
-    acc[monthYear].push(event.date);
+    
+    const day = format(parseISO(event.date), "dd"); 
+    acc[monthYear].push(day);
+    
     return acc;
   }, {});
 
@@ -34,7 +34,7 @@ const updateConsultationDays = async (customerId) => {
       await CustomersBillingRecords.create({
         customer_id: customerId,
         month_and_year: monthYear,
-        consultation_days: days.join(", "),
+        consultation_days: days.join(", "), 
         num_consultations: numConsultations,
       });
     }
@@ -48,5 +48,7 @@ const recalculateAllConsultationDays = async () => {
     await updateConsultationDays(customer.customer_id);
   }
 };
+
+
 
 module.exports = { updateConsultationDays, recalculateAllConsultationDays };
