@@ -69,9 +69,8 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
 
   const totalRevenueFromIncome = revenues.reduce((acc, revenue) => acc + parseFloat(revenue.value || 0), 0);
   const totalExpenseFromIncome = expenses.reduce((acc, expense) => acc + parseFloat(expense.value || 0), 0);
-
   const netRevenue = totalRevenue + totalRevenueFromIncome - totalExpenseFromIncome;
-
+  const netTime = (netRevenue / totalConsultations).toFixed(2);
 
   const formattedRecords = billingRecords.map((record) => {
     const daysArray = record.consultation_days
@@ -92,6 +91,7 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
     totalConsultations,
     totalRevenue: parseFloat(totalRevenue).toFixed(2),
     netRevenue: parseFloat(netRevenue).toFixed(2),
+    netTime,
   });
 };
 
