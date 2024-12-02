@@ -8,11 +8,17 @@ const { Calendar } = require("../models/calendarModel");
 User.hasMany(Customer, { foreignKey: "user_id" });
 Customer.belongsTo(User, { foreignKey: "user_id" });
 
+User.hasMany(Customer, { foreignKey: "user_id" });
+Event.belongsTo(User, { foreignKey: "user_id" });
+
 User.hasMany(income, { foreignKey: "user_id" });
 income.belongsTo(User, { foreignKey: "user_id"});
 
 Customer.hasMany(CustomersBillingRecords, { foreignKey: "customer_id" });
 CustomersBillingRecords.belongsTo(Customer, { foreignKey: "customer_id" });
+
+Customer.hasMany(CustomersBillingRecords, { foreignKey: "customer_id" });
+Event.belongsTo(Customer, { foreignKey: "customer_id" });
 
 User.hasMany(income, { foreignKey: "user_id" });
 income.belongsTo(User, { foreignKey: "user_id" });

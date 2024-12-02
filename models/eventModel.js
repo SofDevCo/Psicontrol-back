@@ -18,6 +18,14 @@ const Event = sequelize.define(
         key: "user_id",
       },
     },
+    customer_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: "Customer",
+        key: "customer_id",
+      },
+    },
     event_name: {
       type: DataTypes.STRING,
       allowNull: true,

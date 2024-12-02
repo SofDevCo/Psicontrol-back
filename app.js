@@ -7,6 +7,7 @@ const { oauth2Client, authUrl } = require("./config/oauth2");
 const eventRoutes = require("./routes/eventRoutes");
 const revenueRoutes = require("./routes/revenueRoutes"); 
 const userRoutes = require("./routes/userRoutes");
+const dashBoardRoutes = require("./routes/dashBoardRoutes");
 const {
   handleOAuth2Callback,
   initiateGoogleAuth,
@@ -39,6 +40,7 @@ app.get("/google", initiateGoogleAuth);
 app.get("/oauth2callback", handleOAuth2Callback);
 app.use("/events", verifyToken, eventRoutes);
 app.use("/income", verifyToken, revenueRoutes);
+app.use("/dashboard", verifyToken, dashBoardRoutes);
 app.use("/user", verifyToken, userRoutes);
 app.get("/auth/google/callback", handleOAuth2Callback);
 require("./cronjob/cronJob");

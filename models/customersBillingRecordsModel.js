@@ -14,21 +14,33 @@ const CustomersBillingRecords = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: Customer,
+        model: "Customer",
         key: "customer_id",
       },
     },
     month_and_year: {
-      type: DataTypes.DATEONLY,
-      allowNull: false,
+      type: DataTypes.STRING,
+      allowNull: true,
     },
     total_consultation_fee: {
       type: DataTypes.DECIMAL(10, 2),
-      allowNull: false,
+      allowNull: true,
+    },
+    consultation_fee: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+    },
+    consultation_days:{
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    num_consultations: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
     },
     payment_amount: {
       type: DataTypes.DECIMAL(10, 2),
-      allowNull: false,
+      allowNull: true,
     },
     payment_date: {
       type: DataTypes.DATEONLY,
@@ -44,7 +56,7 @@ const CustomersBillingRecords = sequelize.define(
     },
     payment_status: {
       type: DataTypes.ENUM("aberto", "pago", "parcial"),
-      allowNull: false,
+      allowNull: true,
     },
     sending_invoice: {
       type: DataTypes.BOOLEAN,
@@ -52,7 +64,7 @@ const CustomersBillingRecords = sequelize.define(
     },
   },
   {
-    tableName: "Customers_billing_records",
+    tableName: "customers_billing_records",
     timestamps: false,
   }
 );

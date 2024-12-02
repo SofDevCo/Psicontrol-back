@@ -16,3 +16,5 @@ vendor/
 # Ignorar arquivos de build
 dist/
 build/
+
+Psicontrol.git/
