@@ -1,4 +1,4 @@
-const { Customer, CustomersBillingRecords, User } = require("../models");
+const { Customer, CustomersBillingRecords } = require("../models");
 const { Op } = require("sequelize");
 
 exports.getBillingRecordsByMonthAndYear = async (req, res) => {
@@ -50,8 +50,22 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
     return acc + (record.consultation_fee || 0) * numConsultations;
   }, 0);
 
+  const formattedRecords = billingRecords.map((record) => {
+    const daysArray = record.consultation_days
+      ? record.consultation_days.split(",").map((day) => day.trim())
+      : [];
+    const numConsultations = daysArray.length;
+    const consultationFee = parseFloat(record.consultation_fee || 0);
+    const totalConsultationFee = (numConsultations * consultationFee).toFixed(2);
+
+    return {
+      ...record.toJSON(),
+      total_consultation_fee: totalConsultationFee,
+    };
+  });
+
   res.status(200).json({
-    billingRecords,
+    billingRecords: formattedRecords,
     totalConsultations,
     totalRevenue: parseFloat(totalRevenue).toFixed(2),
   });
