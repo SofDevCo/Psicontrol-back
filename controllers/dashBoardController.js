@@ -1,4 +1,4 @@
-const { Customer, CustomersBillingRecords } = require("../models");
+const { Customer, CustomersBillingRecords, income } = require("../models");
 const { Op } = require("sequelize");
 
 exports.getBillingRecordsByMonthAndYear = async (req, res) => {
@@ -50,6 +50,29 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
     return acc + (record.consultation_fee || 0) * numConsultations;
   }, 0);
 
+  const monthYear = `${month}/${year.slice(-2)}`;
+  const revenues = await income.findAll({
+    where: {
+      user_id: userId,
+      type: "revenue",
+      month_year: monthYear,
+    },
+  });
+
+  const expenses = await income.findAll({
+    where: {
+      user_id: userId,
+      type: "expense",
+      month_year: monthYear,
+    },
+  });
+
+  const totalRevenueFromIncome = revenues.reduce((acc, revenue) => acc + parseFloat(revenue.value || 0), 0);
+  const totalExpenseFromIncome = expenses.reduce((acc, expense) => acc + parseFloat(expense.value || 0), 0);
+
+  const netRevenue = totalRevenue + totalRevenueFromIncome - totalExpenseFromIncome;
+
+
   const formattedRecords = billingRecords.map((record) => {
     const daysArray = record.consultation_days
       ? record.consultation_days.split(",").map((day) => day.trim())
@@ -68,6 +91,7 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
     billingRecords: formattedRecords,
     totalConsultations,
     totalRevenue: parseFloat(totalRevenue).toFixed(2),
+    netRevenue: parseFloat(netRevenue).toFixed(2),
   });
 };
 
