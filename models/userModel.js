@@ -46,6 +46,18 @@ const User = sequelize.define(
       type: DataTypes.STRING(255),
       allowNull: true,
     },
+    user_message: {
+      type: DataTypes.TEXT,
+      allowNull: true, // Permite que o campo seja nulo caso não haja mensagem
+    },
+    clinic_name: {
+      type: DataTypes.STRING(255), // Novo campo para "Nome/Clínica"
+      allowNull: true, // Permite ser nulo inicialmente
+    },
+    image: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
   },
   {
     tableName: "users",

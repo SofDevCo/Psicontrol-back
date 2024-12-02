@@ -5,7 +5,9 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const { oauth2Client, authUrl } = require("./config/oauth2");
 const eventRoutes = require("./routes/eventRoutes");
-const revenueRoutes = require("./routes/revenueRoutes"); // Importa as rotas de receitas e despesas
+const revenueRoutes = require("./routes/revenueRoutes"); 
+const userRoutes = require("./routes/userRoutes");
+const dashBoardRoutes = require("./routes/dashBoardRoutes");
 const {
   handleOAuth2Callback,
   initiateGoogleAuth,
@@ -20,6 +22,8 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 //app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -36,6 +40,8 @@ app.get("/google", initiateGoogleAuth);
 app.get("/oauth2callback", handleOAuth2Callback);
 app.use("/events", verifyToken, eventRoutes);
 app.use("/income", verifyToken, revenueRoutes);
+app.use("/dashboard", verifyToken, dashBoardRoutes);
+app.use("/user", verifyToken, userRoutes);
 app.get("/auth/google/callback", handleOAuth2Callback);
 require("./cronjob/cronJob");
 

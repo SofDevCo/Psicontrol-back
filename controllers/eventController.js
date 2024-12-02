@@ -179,25 +179,40 @@ exports.getEventsByCalendar = async (req, res) => {
 
 exports.saveSelectedCalendars = async (req, res) => {
   const { calendarId } = req.params;
-  const { enabled } = req.body;
+  const { enabled, calendar_name } = req.body; // Recebe o nome do calendário e o status
+  const userId = req.user.user_id;
+
+  if (!userId) {
+    console.error("Erro: user_id está undefined. Verifique o middleware de autenticação.");
+    return res.status(400).json({ error: "ID do usuário não encontrado." });
+  }
 
   try {
+    console.log(`Calendar ID: ${calendarId}, Enabled: ${enabled}, User ID: ${userId}`); // Log para verificação
+
+    // Verifica se o calendário já existe para o usuário
     const calendar = await Calendar.findOne({
-      where: { calendar_id: calendarId },
+      where: { calendar_id: calendarId, user_id: userId }
     });
 
     if (calendar) {
-      await Calendar.update(
-        { enabled },
-        { where: { calendar_id: calendarId } }
-      );
-      res
-        .status(200)
-        .json({ message: "Status do calendário atualizado com sucesso!" });
+      // Se existir, atualiza o estado de `enabled` e `calendar_name`
+      await calendar.update({ enabled: !!enabled, calendar_name });
+      res.status(200).json({ message: "Status e nome do calendário atualizados com sucesso!" });
     } else {
-      res.status(404).json({ error: "Calendário não encontrado." });
+      // Se não existir, cria um novo registro com `enabled` e `calendar_name`
+      await Calendar.create({
+        calendar_id: calendarId,
+        enabled: !!enabled, // Define `enabled` como verdadeiro ou falso de acordo com o valor recebido
+        calendar_name,
+        user_id: userId
+      });
+      res.status(201).json({ message: "Novo calendário criado e status atualizado!" });
     }
   } catch (error) {
-    res.status(500).json({ error: "Erro ao atualizar o calendário." });
+    console.error("Erro ao salvar o calendário:", error);
+    res.status(500).json({ error: "Erro ao salvar o calendário." });
   }
 };
+
+
