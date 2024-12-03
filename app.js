@@ -8,6 +8,7 @@ const eventRoutes = require("./routes/eventRoutes");
 const revenueRoutes = require("./routes/revenueRoutes"); 
 const userRoutes = require("./routes/userRoutes");
 const dashBoardRoutes = require("./routes/dashBoardRoutes");
+const whatsappRoutes = require("./routes/whatsappRoutes");
 const {
   handleOAuth2Callback,
   initiateGoogleAuth,
@@ -44,6 +45,7 @@ app.use("/dashboard", verifyToken, dashBoardRoutes);
 app.use("/user", verifyToken, userRoutes);
 app.get("/auth/google/callback", handleOAuth2Callback);
 require("./cronjob/cronJob");
+app.use("/whatsapp", verifyToken, whatsappRoutes);
 
 app.listen(port, () => {
   console.log(`Servidor rodando em http://localhost:${port}`);
