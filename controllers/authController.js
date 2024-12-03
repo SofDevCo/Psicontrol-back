@@ -236,7 +236,6 @@ async function handleOAuth2Callback(req, res) {
     const authenticationToken = bcrypt.hashSync(new Date().toISOString(), 10);
 
     const user = await User.findOne({ where: { user_email: data.email } });
-    const user = await User.findOne({ where: { user_email: data.email } });
     user.autentication_token = authenticationToken;
     await user.save();
 
