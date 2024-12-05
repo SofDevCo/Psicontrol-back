@@ -68,7 +68,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
           calendar_id: calendarId,
           calendar_name: calendar.summary,
           user_id: user.user_id,
-          enabled: false,
+          enabled: false, // Calendários novos são criados desativados
         });
       }
 
@@ -236,13 +236,12 @@ async function handleOAuth2Callback(req, res) {
     const authenticationToken = bcrypt.hashSync(new Date().toISOString(), 10);
 
     const user = await User.findOne({ where: { user_email: data.email } });
-    const user = await User.findOne({ where: { user_email: data.email } });
     user.autentication_token = authenticationToken;
     await user.save();
 
     await syncGoogleCalendarWithDatabase(tokens.access_token);
 
-    res.redirect(`http://localhost:3001/token?token=${authenticationToken}`);
+    res.redirect(`${process.env.FRONTEND_URL}/token?token=${authenticationToken}`);
   } catch (error) {
     res.status(500).send("Erro ao concluir a autenticação.");
   }
@@ -265,9 +264,7 @@ const checkAndHandleCalendars = async (req, res) => {
       return res.json({ redirect: "/select-calendar" });
     }
 
-    const calendarIds = enabledCalendars.map(
-      (calendar) => calendar.calendar_id
-    );
+    const calendarIds = enabledCalendars.map((calendar) => calendar.calendar_id);
     console.log("Calendários habilitados encontrados:", calendarIds);
 
     return res.json({
@@ -278,6 +275,7 @@ const checkAndHandleCalendars = async (req, res) => {
     res.status(500).json({ error: "Erro interno ao verificar calendários." });
   }
 };
+
 
 module.exports = {
   handleOAuth2Callback,
