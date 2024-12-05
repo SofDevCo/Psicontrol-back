@@ -7,7 +7,7 @@ const authController = require("../controllers/authController")
 const { verifyToken } = require("../middleware/authMiddleware");
 
 router.get("/select-calendar", (req, res) => {
-  res.redirect("http://localhost:3001/select-calendar");
+  res.redirect(`${process.env.API_URL}/select-calendar`);
 });
 router.get("/check-calendars", authController.checkAndHandleCalendars);
 

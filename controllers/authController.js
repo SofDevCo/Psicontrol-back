@@ -241,7 +241,7 @@ async function handleOAuth2Callback(req, res) {
 
     await syncGoogleCalendarWithDatabase(tokens.access_token);
 
-    res.redirect(`http://localhost:3001/token?token=${authenticationToken}`);
+    res.redirect(`${process.env.FRONTEND_URL}/token?token=${authenticationToken}`);
   } catch (error) {
     res.status(500).send("Erro ao concluir a autenticação.");
   }
