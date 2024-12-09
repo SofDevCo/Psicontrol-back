@@ -18,7 +18,8 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
 
   const billingRecords = await CustomersBillingRecords.findAll({
     where: {
-      month_and_year: { [Op.like]: `${year}-${month.padStart(2, "0")}%` },    },
+      month_and_year: { [Op.like]: `${year}-${month.padStart(2, "0")}%` },
+    },
     include: [
       {
         model: Customer,
@@ -33,7 +34,6 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
       .status(404)
       .json({ message: "Nenhum registro encontrado para este mês e ano." });
   }
-
 
   const totalConsultations = billingRecords.reduce((acc, record) => {
     const daysArray = record.consultation_days
@@ -67,9 +67,16 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
     },
   });
 
-  const totalRevenueFromIncome = revenues.reduce((acc, revenue) => acc + parseFloat(revenue.value || 0), 0);
-  const totalExpenseFromIncome = expenses.reduce((acc, expense) => acc + parseFloat(expense.value || 0), 0);
-  const netRevenue = totalRevenue + totalRevenueFromIncome - totalExpenseFromIncome;
+  const totalRevenueFromIncome = revenues.reduce(
+    (acc, revenue) => acc + parseFloat(revenue.value || 0),
+    0
+  );
+  const totalExpenseFromIncome = expenses.reduce(
+    (acc, expense) => acc + parseFloat(expense.value || 0),
+    0
+  );
+  const netRevenue =
+    totalRevenue + totalRevenueFromIncome - totalExpenseFromIncome;
   const netTime = (netRevenue / totalConsultations).toFixed(2);
 
   const formattedRecords = billingRecords.map((record) => {
@@ -77,12 +84,14 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
       ? record.consultation_days.split(",").map((day) => day.trim())
       : [];
     const numConsultations = daysArray.length;
+  
     const consultationFee = parseFloat(record.consultation_fee || 0);
-    const totalConsultationFee = (numConsultations * consultationFee).toFixed(2);
-
+    const totalConsultationFee = numConsultations * consultationFee;
+    console.log("Fee:", record.consultation_fee, "Days:", record.consultation_days, "total", totalConsultationFee);
+  
     return {
       ...record.toJSON(),
-      total_consultation_fee: totalConsultationFee,
+      total_consultation_fee: totalConsultationFee > 0 ? totalConsultationFee.toFixed(2) : "0.00",
     };
   });
 
@@ -94,5 +103,3 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
     netTime,
   });
 };
-
-
