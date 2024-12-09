@@ -33,5 +33,7 @@ exports.sendWhatsAppMessage = async (req, res) => {
 
   const whatsappLink = `https://wa.me/${formattedPhoneNumber}?text=${encodedMessage}`;
 
-  res.status(200).json({ whatsappLink });
+  res.status(200).json({ 
+    user_message: message,
+    whatsappLink });
 };
