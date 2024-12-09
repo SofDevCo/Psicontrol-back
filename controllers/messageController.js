@@ -45,13 +45,13 @@ exports.sendWhatsAppMessage = async (req, res) => {
       : `${consultationDays.slice(0, -1).join(", ")} e ${consultationDays.slice(
           -1
         )}`;
-        
+
+  const [year, month] = billingRecord.month_and_year.split("-");
+  const date = new Date(year, Number(month) - 1, 1);
 
   const dynamicData = {
     nome: customer.customer_name,
-    mes:(billingRecord.month_and_year).toLocaleString("pt-BR", {
-      month: "long",
-    }),
+    mes: date.toLocaleString("pt-BR", { month: "long" }),
     dias: formattedDays,
     valor_total: totalConsultationFee.replace(".", ","),
     clinic_name: user.clinic_name || "Consultório",
