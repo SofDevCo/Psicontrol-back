@@ -8,7 +8,7 @@ const eventRoutes = require("./routes/eventRoutes");
 const revenueRoutes = require("./routes/revenueRoutes"); 
 const userRoutes = require("./routes/userRoutes");
 const dashBoardRoutes = require("./routes/dashBoardRoutes");
-const whatsappRoutes = require("./routes/whatsappRoutes");
+const messageRoutes = require("./routes/messageRoutes");
 const {
   handleOAuth2Callback,
   initiateGoogleAuth,
@@ -17,11 +17,19 @@ const { verifyToken } = require("./middleware/authMiddleware");
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  next();
-});
+
+const corsOptions = {
+  origin: process.env.FRONTEND_URL,
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+
+// app.use((req, res, next) => {
+//   res.header("Access-Control-Allow-Origin", "*");
+//   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+//   next();
+// });
 
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -44,7 +52,7 @@ app.use("/dashboard", verifyToken, dashBoardRoutes);
 app.use("/user", verifyToken, userRoutes);
 app.get("/auth/google/callback", handleOAuth2Callback);
 require("./cronjob/cronJob");
-app.use("/whatsapp", verifyToken, whatsappRoutes);
+app.use("/message", verifyToken, messageRoutes);
 
 app.listen(port, () => {
   console.log(`Servidor rodando em http://localhost:${port}`);
