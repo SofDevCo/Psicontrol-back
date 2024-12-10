@@ -17,20 +17,11 @@ const { verifyToken } = require("./middleware/authMiddleware");
 const app = express();
 const port = process.env.PORT || 3000;
 
-
 const corsOptions = {
-  origin: process.env.FRONTEND_URL,
-  credentials: true,
+  origin: "*"
 };
 
 app.use(cors(corsOptions));
-
-// app.use((req, res, next) => {
-//   res.header("Access-Control-Allow-Origin", "*");
-//   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-//   next();
-// });
-
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
