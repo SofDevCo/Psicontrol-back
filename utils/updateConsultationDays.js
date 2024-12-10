@@ -12,7 +12,7 @@ const updateConsultationDays = async (customerId) => {
     const monthYear = `${year}-${month}`;
     if (!acc[monthYear]) acc[monthYear] = [];
     
-    const day = format(parseISO(event.date), "dd"); 
+    const day = format(parseISO(event.date), "dd");
     acc[monthYear].push(day);
     
     return acc;
@@ -21,22 +21,34 @@ const updateConsultationDays = async (customerId) => {
   for (const [monthYear, days] of Object.entries(daysByMonthYear)) {
     const numConsultations = days.length;
 
-    const existingRecord = await CustomersBillingRecords.findOne({
-      where: { customer_id: customerId, month_and_year: monthYear },
+    const nullRecord = await CustomersBillingRecords.findOne({
+      where: { customer_id: customerId, month_and_year: null },
     });
 
-    if (existingRecord) {
-      await existingRecord.update({
+    if (nullRecord) {
+      await nullRecord.update({
+        month_and_year: monthYear, 
         consultation_days: days.join(", "),
         num_consultations: numConsultations,
       });
     } else {
-      await CustomersBillingRecords.create({
-        customer_id: customerId,
-        month_and_year: monthYear,
-        consultation_days: days.join(", "), 
-        num_consultations: numConsultations,
+      const existingRecord = await CustomersBillingRecords.findOne({
+        where: { customer_id: customerId, month_and_year: monthYear },
       });
+
+      if (existingRecord) {
+        await existingRecord.update({
+          consultation_days: days.join(", "),
+          num_consultations: numConsultations,
+        });
+      } else {
+        await CustomersBillingRecords.create({
+          customer_id: customerId,
+          month_and_year: monthYear,
+          consultation_days: days.join(", "),
+          num_consultations: numConsultations,
+        });
+      }
     }
   }
 };
