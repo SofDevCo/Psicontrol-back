@@ -86,9 +86,7 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
     const numConsultations = daysArray.length;
   
     const consultationFee = parseFloat(record.consultation_fee || 0);
-    const totalConsultationFee = numConsultations * consultationFee;
-    console.log("Fee:", record.consultation_fee, "Days:", record.consultation_days, "total", totalConsultationFee);
-  
+    const totalConsultationFee = numConsultations * consultationFee;  
     return {
       ...record.toJSON(),
       total_consultation_fee: totalConsultationFee > 0 ? totalConsultationFee.toFixed(2) : "0.00",
