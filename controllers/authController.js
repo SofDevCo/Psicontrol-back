@@ -68,7 +68,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
           calendar_id: calendarId,
           calendar_name: calendar.summary,
           user_id: user.user_id,
-          enabled: false, // Calendários novos são criados desativados
+          enabled: false, 
         });
       }
 
@@ -94,7 +94,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
         if (event.start && event.start.dateTime) {
           const dateTime = event.start.dateTime;
           if (dateTime) {
-            startDate = format(parseISO(dateTime), "dd"); 
+            startDate = format(parseISO(dateTime),  "yyyy-MM-dd"); 
             startTime = dateTime
               .split("T")[1] 
               .split(":")
@@ -146,7 +146,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
               start_time: startTime,
               end_time: endTime,
               user_id: user.user_id,
-              customer_id: customerId,
+              customer_id: null,
             });
           }
           await updateConsultationDays(customerId);
