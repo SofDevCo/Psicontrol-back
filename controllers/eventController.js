@@ -106,6 +106,34 @@ exports.deleteEvent = async (req, res) => {
   }
 };
 
+exports.deleteUnmatchedEvent = async (req, res) => {
+  const { google_event_id } = req.params;
+
+  const event = await Event.findOne({
+    where: {
+      user_id: req.user.user_id,
+      customer_id: null,
+      google_event_id: google_event_id,
+    },
+  });
+
+
+  if (!event) {
+    return res.status(404).send("Evento não encontrado ou já sincronizado.");
+  }
+
+  await event.destroy();
+
+  if (event.google_event_id) {
+    await deleteEventFromGoogleCalendar(
+      event.calendar_id,
+      event.google_event_id
+    );
+  }
+
+  res.send("Evento excluído com sucesso.");
+};
+
 const checkEventExists = async (googleEventId, calendarId) => {
   try {
     await authenticateClient();
@@ -200,10 +228,6 @@ exports.saveSelectedCalendars = async (req, res) => {
   if (!userId) {
     return res.status(400).json({ error: "ID do usuário não encontrado." });
   }
-
-  console.log(
-    `Calendar ID: ${calendarId}, Enabled: ${enabled}, User ID: ${userId}, Calendar Name: ${calendar_name}`
-  );
 
   const calendar = await Calendar.findOne({
     where: { calendar_id: calendarId, user_id: userId },
