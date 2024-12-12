@@ -94,7 +94,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
         if (event.start && event.start.dateTime) {
           const dateTime = event.start.dateTime;
           if (dateTime) {
-            startDate = format(parseISO(dateTime),  "yyyy-MM-dd"); 
+            startDate = format(parseISO(dateTime),  "yyyy-MM-dd"  ); 
             startTime = dateTime
               .split("T")[1] 
               .split(":")
