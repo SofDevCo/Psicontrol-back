@@ -117,7 +117,6 @@ exports.deleteUnmatchedEvent = async (req, res) => {
     },
   });
 
-
   if (!event) {
     return res.status(404).send("Evento não encontrado ou já sincronizado.");
   }
@@ -229,13 +228,19 @@ exports.saveSelectedCalendars = async (req, res) => {
     return res.status(400).json({ error: "ID do usuário não encontrado." });
   }
 
+  if (!calendarId || calendarId === "undefined") {
+    return res.status(400).json({ error: "ID do calendário inválido." });
+  }
+
   const calendar = await Calendar.findOne({
     where: { calendar_id: calendarId, user_id: userId },
   });
 
   if (calendar) {
     await calendar.update({ enabled: !!enabled, calendar_name });
-    res.status(200).json({ message: "Calendário atualizado com sucesso!" });
+    return res
+      .status(200)
+      .json({ message: "Calendário atualizado com sucesso!" });
   } else {
     await Calendar.create({
       calendar_id: calendarId,
