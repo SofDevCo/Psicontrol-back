@@ -38,7 +38,7 @@ exports.upsertCustomer = async (userId, customerData) => {
       return res.status(401).json({ error: "Usuário não autenticado." });
     }
 
-    await customer.update({ 
+    await customer.update({
       customer_name,
       customer_cpf_cnpj,
       customer_phone,
@@ -56,12 +56,13 @@ exports.upsertCustomer = async (userId, customerData) => {
 
     if (billingRecord) {
       await billingRecord.update({
-        consultation_fee: consultation_fee || 0.0, 
+        consultation_fee: parseFloat(consultation_fee) || 0.0,
       });
     } else {
       await CustomersBillingRecords.create({
         customer_id: customer.customer_id,
-        consultation_fee,
+        month_and_year: null,
+        consultation_fee: parseFloat(consultation_fee) || 0.0,
       });
     }
 
@@ -79,11 +80,7 @@ exports.upsertCustomer = async (userId, customerData) => {
       alternative_cpf_cnpj,
       customer_dob: formattedCustomerDob,
       archived: false,
-    });
-
-    await CustomersBillingRecords.create({
-      customer_id: newCustomer.customer_id,
-      consultation_fee: consultation_fee || 0.0,
+      consultation_fee,
     });
 
     const age = calculateAge(formattedCustomerDob);

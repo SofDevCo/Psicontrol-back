@@ -1,5 +1,5 @@
 const { format, parseISO } = require("date-fns");
-const { Event, CustomersBillingRecords } = require("../models");
+const { Event, CustomersBillingRecords, Customer } = require("../models");
 
 const updateConsultationDays = async (customerId) => {
   const events = await Event.findAll({
@@ -17,38 +17,33 @@ const updateConsultationDays = async (customerId) => {
     
     return acc;
   }, {});
+  
+  const consultationFee = await Customer.findOne({
+    where: { customer_id: customerId },
+    attributes: ["consultation_fee"],
+  });
 
   for (const [monthYear, days] of Object.entries(daysByMonthYear)) {
     const numConsultations = days.length;
 
-    const nullRecord = await CustomersBillingRecords.findOne({
-      where: { customer_id: customerId, month_and_year: null },
+    const existingRecord = await CustomersBillingRecords.findOne({
+      where: { customer_id: customerId, month_and_year: monthYear },
     });
 
-    if (nullRecord) {
-      await nullRecord.update({
-        month_and_year: monthYear, 
+    if (existingRecord) {
+      await existingRecord.update({
         consultation_days: days.join(", "),
         num_consultations: numConsultations,
+        consultation_fee: consultationFee.consultation_fee || 0.0,
       });
     } else {
-      const existingRecord = await CustomersBillingRecords.findOne({
-        where: { customer_id: customerId, month_and_year: monthYear },
+      await CustomersBillingRecords.create({
+        customer_id: customerId,
+        month_and_year: monthYear,
+        consultation_days: days.join(", "),
+        num_consultations: numConsultations,
+        consultation_fee: consultationFee.consultation_fee || 0.0,
       });
-
-      if (existingRecord) {
-        await existingRecord.update({
-          consultation_days: days.join(", "),
-          num_consultations: numConsultations,
-        });
-      } else {
-        await CustomersBillingRecords.create({
-          customer_id: customerId,
-          month_and_year: monthYear,
-          consultation_days: days.join(", "),
-          num_consultations: numConsultations,
-        });
-      }
     }
   }
 };
@@ -60,7 +55,5 @@ const recalculateAllConsultationDays = async () => {
     await updateConsultationDays(customer.customer_id);
   }
 };
-
-
 
 module.exports = { updateConsultationDays, recalculateAllConsultationDays };
