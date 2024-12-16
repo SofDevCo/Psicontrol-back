@@ -56,7 +56,6 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
     for (const calendar of calendars) {
       const calendarId = calendar.id;
 
-      // Verificar se o calendário já existe no banco de dados
       const dbCalendar = await Calendar.findOne({
         where: { calendar_id: calendarId },
       });
@@ -68,7 +67,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
           calendar_id: calendarId,
           calendar_name: calendar.summary,
           user_id: user.user_id,
-          enabled: false, 
+          enabled: false,
         });
       }
 
@@ -82,7 +81,17 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
 
       const unmatchedEvents = [];
 
+      const processedEvents = new Set();
+
       for (const event of events) {
+        const uniqueKey = `${event.summary.trim()}_${
+          event.start?.date || event.start?.dateTime.split("T")[0]
+        }`;
+        if (processedEvents.has(uniqueKey)) {
+          continue;
+        }
+        processedEvents.add(uniqueKey);
+
         const eventExists = await Event.findOne({
           where: { google_event_id: event.id },
         });
@@ -94,12 +103,8 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
         if (event.start && event.start.dateTime) {
           const dateTime = event.start.dateTime;
           if (dateTime) {
-            startDate = format(parseISO(dateTime),  "yyyy-MM-dd"  ); 
-            startTime = dateTime
-              .split("T")[1] 
-              .split(":")
-              .slice(0, 2)
-              .join(":");
+            startDate = format(parseISO(dateTime), "yyyy-MM-dd");
+            startTime = dateTime.split("T")[1].split(":").slice(0, 2).join(":");
 
             if (event.end && event.end.dateTime) {
               endTime = event.end.dateTime
@@ -241,7 +246,9 @@ async function handleOAuth2Callback(req, res) {
 
     await syncGoogleCalendarWithDatabase(tokens.access_token);
 
-    res.redirect(`${process.env.FRONTEND_URL}/token?token=${authenticationToken}`);
+    res.redirect(
+      `${process.env.FRONTEND_URL}/token?token=${authenticationToken}`
+    );
   } catch (error) {
     res.status(500).send("Erro ao concluir a autenticação.");
   }
@@ -264,7 +271,9 @@ const checkAndHandleCalendars = async (req, res) => {
       return res.json({ redirect: "/select-calendar" });
     }
 
-    const calendarIds = enabledCalendars.map((calendar) => calendar.calendar_id);
+    const calendarIds = enabledCalendars.map(
+      (calendar) => calendar.calendar_id
+    );
     console.log("Calendários habilitados encontrados:", calendarIds);
 
     return res.json({
@@ -275,7 +284,6 @@ const checkAndHandleCalendars = async (req, res) => {
     res.status(500).json({ error: "Erro interno ao verificar calendários." });
   }
 };
-
 
 module.exports = {
   handleOAuth2Callback,
