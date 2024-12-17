@@ -3,10 +3,12 @@ const Handlebars = require("handlebars");
 
 exports.sendWhatsAppMessage = async (req, res) => {
   const userId = req.user.user_id;
-  const { customer_id } = req.body;
+  const { customer_id, selected_month } = req.body;
 
-  if (!customer_id) {
-    return res.status(400).json({ error: "ID do cliente é obrigatório." });
+  if (!customer_id || !selected_month) {
+    return res
+      .status(400)
+      .json({ error: "ID do cliente e mês são obrigatórios." });
   }
 
   const user = await User.findOne({ where: { user_id: userId } });
@@ -21,23 +23,34 @@ exports.sendWhatsAppMessage = async (req, res) => {
     return res.status(404).json({ error: "Cliente não encontrado." });
   }
 
-  const billingRecord = await CustomersBillingRecords.findOne({
-    where: { customer_id },
-    order: [["month_and_year", "DESC"]],
+  const billingRecords = await CustomersBillingRecords.findAll({
+    where: {
+      customer_id,
+      month_and_year: selected_month,
+    },
   });
 
-  if (!billingRecord) {
+  if (!billingRecords || billingRecords.length === 0) {
     return res.status(404).json({
-      error: "Registro de faturamento não encontrado para o cliente.",
+      error: "Nenhum registro encontrado para o mês selecionado.",
     });
   }
 
   const consultationFee = parseFloat(customer.consultation_fee || 0);
-  const consultationDays = billingRecord.consultation_days
-    ? billingRecord.consultation_days.split(",").map((day) => day.trim())
-    : [];
-  const numConsultations = consultationDays.length;
-  const totalConsultationFee = (numConsultations * consultationFee).toFixed(2);
+  let consultationDays = [];
+  let totalConsultations = 0;
+
+  billingRecords.forEach((record) => {
+    const days = record.consultation_days
+      ? record.consultation_days.split(",").map((day) => day.trim())
+      : [];
+    totalConsultations += days.length;
+    consultationDays = consultationDays.concat(days);
+  });
+
+  const totalConsultationFee = (totalConsultations * consultationFee).toFixed(
+    2
+  );
 
   const formattedDays =
     consultationDays.length === 1
@@ -46,7 +59,7 @@ exports.sendWhatsAppMessage = async (req, res) => {
           -1
         )}`;
 
-  const [year, month] = billingRecord.month_and_year.split("-");
+  const [year, month] = selected_month.split("-");
   const date = new Date(year, Number(month) - 1, 1);
 
   const dynamicData = {
@@ -73,10 +86,12 @@ exports.sendWhatsAppMessage = async (req, res) => {
 
 exports.sendEmailMessage = async (req, res) => {
   const userId = req.user.user_id;
-  const { customer_id } = req.body;
+  const { customer_id, selected_month } = req.body;
 
-  if (!customer_id) {
-    return res.status(400).json({ error: "ID do cliente é obrigatório." });
+  if (!customer_id || !selected_month) {
+    return res
+      .status(400)
+      .json({ error: "ID do cliente e mês são obrigatórios." });
   }
 
   const user = await User.findOne({ where: { user_id: userId } });
@@ -87,29 +102,38 @@ exports.sendEmailMessage = async (req, res) => {
   }
 
   const customer = await Customer.findOne({ where: { customer_id } });
-  if (!customer || !customer.customer_email) {
-    return res.status(404).json({ error: "Email do cliente não encontrado." });
+  if (!customer) {
+    return res.status(404).json({ error: "Cliente não encontrado." });
   }
 
-  const billingRecord = await CustomersBillingRecords.findOne({
-    where: { customer_id },
-    order: [["month_and_year", "DESC"]],
+  const billingRecords = await CustomersBillingRecords.findAll({
+    where: {
+      customer_id,
+      month_and_year: selected_month,
+    },
   });
 
-  if (!billingRecord) {
+  if (!billingRecords || billingRecords.length === 0) {
     return res.status(404).json({
-      error: "Registro de faturamento não encontrado para o cliente.",
+      error: "Nenhum registro encontrado para o mês selecionado.",
     });
   }
 
-  let consultationDays = billingRecord.consultation_days;
-  if (consultationDays) {
-    try {
-      consultationDays = JSON.parse(consultationDays);
-    } catch {
-      consultationDays = consultationDays.split(",").map((day) => day.trim());
-    }
-  }
+  const consultationFee = parseFloat(customer.consultation_fee || 0);
+  let consultationDays = [];
+  let totalConsultations = 0;
+
+  billingRecords.forEach((record) => {
+    const days = record.consultation_days
+      ? record.consultation_days.split(",").map((day) => day.trim())
+      : [];
+    totalConsultations += days.length;
+    consultationDays = consultationDays.concat(days);
+  });
+
+  const totalConsultationFee = (totalConsultations * consultationFee).toFixed(
+    2
+  );
 
   const formattedDays =
     consultationDays.length === 1
@@ -118,15 +142,14 @@ exports.sendEmailMessage = async (req, res) => {
           -1
         )}`;
 
+  const [year, month] = selected_month.split("-");
+  const date = new Date(year, Number(month) - 1, 1);
+
   const dynamicData = {
     nome: customer.customer_name,
-    mes: new Date(billingRecord.month_and_year).toLocaleString("pt-BR", {
-      month: "long",
-    }),
+    mes: date.toLocaleString("pt-BR", { month: "long" }),
     dias: formattedDays,
-    valor_total: parseFloat(billingRecord.total_consultation_fee || 0)
-      .toFixed(2)
-      .replace(".", ","),
+    valor_total: totalConsultationFee.replace(".", ","),
     clinic_name: user.clinic_name || "Consultório",
   };
 
