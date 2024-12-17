@@ -84,8 +84,10 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
       const processedEvents = new Set();
 
       for (const event of events) {
-        const uniqueKey = `${event.summary.trim()}_${
-          event.start?.date || event.start?.dateTime.split("T")[0]
+        const summary = event.summary?.trim() || "Evento Sem Título";
+
+        const uniqueKey = `${summary}_${
+          event.start?.date || event.start?.dateTime?.split("T")[0]
         }`;
         if (processedEvents.has(uniqueKey)) {
           continue;
@@ -95,6 +97,14 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
         const eventExists = await Event.findOne({
           where: { google_event_id: event.id },
         });
+
+        if (!event.summary) {
+          console.warn("Evento sem summary:", event);
+        }
+
+        const result = fuse.search(summary);
+        const bestMatch = result.length > 0 ? result[0].item : null;
+        const customerId = bestMatch ? bestMatch.customer_id : null;
 
         let startDate = null,
           startTime = null,
@@ -121,10 +131,6 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
           startTime = null;
           endTime = null;
         }
-
-        const result = fuse.search(event.summary.trim());
-        const bestMatch = result.length > 0 ? result[0].item : null;
-        const customerId = bestMatch ? bestMatch.customer_id : null;
 
         if (customerId) {
           if (eventExists) {
