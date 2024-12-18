@@ -56,7 +56,6 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
     for (const calendar of calendars) {
       const calendarId = calendar.id;
 
-      // Verificar se o calendário já existe no banco de dados
       const dbCalendar = await Calendar.findOne({
         where: { calendar_id: calendarId },
       });
@@ -68,7 +67,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
           calendar_id: calendarId,
           calendar_name: calendar.summary,
           user_id: user.user_id,
-          enabled: false, // Calendários novos são criados desativados
+          enabled: false,
         });
       }
 
@@ -82,10 +81,32 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
 
       const unmatchedEvents = [];
 
+      const processedEvents = new Set();
+
       for (const event of events) {
+        const summary = event.summary?.trim() || "Evento Sem Título";
+
+        const uniqueKey = `${summary}_${
+          event.start?.date || event.start?.dateTime?.split("T")[0]
+        }`;
+        if (processedEvents.has(uniqueKey)) {
+          continue;
+        }
+        processedEvents.add(uniqueKey);
+
         const eventExists = await Event.findOne({
           where: { google_event_id: event.id },
         });
+
+        if (!event.summary) {
+          console.warn("Evento sem summary:", event);
+        }
+
+        const cleanedSummary = summary.replace(/^Paciente\s*-\s*/, '');
+
+        const result = fuse.search(cleanedSummary);
+        const bestMatch = result.length > 0 ? result[0].item : null;
+        const customerId = bestMatch ? bestMatch.customer_id : null;
 
         let startDate = null,
           startTime = null,
@@ -94,12 +115,8 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
         if (event.start && event.start.dateTime) {
           const dateTime = event.start.dateTime;
           if (dateTime) {
-            startDate = format(parseISO(dateTime), "dd"); 
-            startTime = dateTime
-              .split("T")[1] 
-              .split(":")
-              .slice(0, 2)
-              .join(":");
+            startDate = format(parseISO(dateTime), "yyyy-MM-dd");
+            startTime = dateTime.split("T")[1].split(":").slice(0, 2).join(":");
 
             if (event.end && event.end.dateTime) {
               endTime = event.end.dateTime
@@ -116,10 +133,6 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
           startTime = null;
           endTime = null;
         }
-
-        const result = fuse.search(event.summary.trim());
-        const bestMatch = result.length > 0 ? result[0].item : null;
-        const customerId = bestMatch ? bestMatch.customer_id : null;
 
         if (customerId) {
           if (eventExists) {
@@ -146,7 +159,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
               start_time: startTime,
               end_time: endTime,
               user_id: user.user_id,
-              customer_id: customerId,
+              customer_id: null,
             });
           }
           await updateConsultationDays(customerId);
@@ -241,7 +254,9 @@ async function handleOAuth2Callback(req, res) {
 
     await syncGoogleCalendarWithDatabase(tokens.access_token);
 
-    res.redirect(`${process.env.FRONTEND_URL}/token?token=${authenticationToken}`);
+    res.redirect(
+      `${process.env.FRONTEND_URL}/token?token=${authenticationToken}`
+    );
   } catch (error) {
     res.status(500).send("Erro ao concluir a autenticação.");
   }
@@ -264,7 +279,9 @@ const checkAndHandleCalendars = async (req, res) => {
       return res.json({ redirect: "/select-calendar" });
     }
 
-    const calendarIds = enabledCalendars.map((calendar) => calendar.calendar_id);
+    const calendarIds = enabledCalendars.map(
+      (calendar) => calendar.calendar_id
+    );
     console.log("Calendários habilitados encontrados:", calendarIds);
 
     return res.json({
@@ -275,7 +292,6 @@ const checkAndHandleCalendars = async (req, res) => {
     res.status(500).json({ error: "Erro interno ao verificar calendários." });
   }
 };
-
 
 module.exports = {
   handleOAuth2Callback,

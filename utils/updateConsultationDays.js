@@ -1,5 +1,5 @@
 const { format, parseISO } = require("date-fns");
-const { Event, CustomersBillingRecords } = require("../models");
+const { Event, CustomersBillingRecords, Customer } = require("../models");
 
 const updateConsultationDays = async (customerId) => {
   const events = await Event.findAll({
@@ -12,11 +12,16 @@ const updateConsultationDays = async (customerId) => {
     const monthYear = `${year}-${month}`;
     if (!acc[monthYear]) acc[monthYear] = [];
     
-    const day = format(parseISO(event.date), "dd"); 
+    const day = format(parseISO(event.date), "dd");
     acc[monthYear].push(day);
     
     return acc;
   }, {});
+  
+  const consultationFee = await Customer.findOne({
+    where: { customer_id: customerId },
+    attributes: ["consultation_fee"],
+  });
 
   for (const [monthYear, days] of Object.entries(daysByMonthYear)) {
     const numConsultations = days.length;
@@ -29,13 +34,15 @@ const updateConsultationDays = async (customerId) => {
       await existingRecord.update({
         consultation_days: days.join(", "),
         num_consultations: numConsultations,
+        consultation_fee: consultationFee.consultation_fee || 0.0,
       });
     } else {
       await CustomersBillingRecords.create({
         customer_id: customerId,
         month_and_year: monthYear,
-        consultation_days: days.join(", "), 
+        consultation_days: days.join(", "),
         num_consultations: numConsultations,
+        consultation_fee: consultationFee.consultation_fee || 0.0,
       });
     }
   }
@@ -48,7 +55,5 @@ const recalculateAllConsultationDays = async () => {
     await updateConsultationDays(customer.customer_id);
   }
 };
-
-
 
 module.exports = { updateConsultationDays, recalculateAllConsultationDays };

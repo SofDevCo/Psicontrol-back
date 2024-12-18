@@ -59,7 +59,7 @@ exports.calculateAge = (dateOfBirth) => {
 
 
   const monthDifference = today.getMonth() - dob.getMonth();
-  if (monthDifference < 0  (monthDifference === 0 && today.getDate() < dob.getDate())) {
+  if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < dob.getDate())) {
     age--; 
   }
 

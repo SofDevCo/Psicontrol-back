@@ -1,5 +1,5 @@
 const { income, User } = require("../models");
-const { format, parseISO, subMonths } = require("date-fns");
+const { format, parseISO, subMonths, isoDate } = require("date-fns");
 const { ptBR } = require("date-fns/locale");
 const {
   formatDateBrazilian,
@@ -70,12 +70,20 @@ const revenueController = {
     try {
       const { selectedMonth, selectedYear } = req.body;
       const user = req.user;
+
+      if(!selectedMonth ||  !selectedYear){
+        return res.status(400).json({ error: "Mês e ano são obrigatórios"})
+      }
   
-      // Cria uma data com base no mês e ano selecionado
-      const selectedDate = parseISO(`${selectedYear}-${selectedMonth}-01`);
-      const currentMonth = format(selectedDate, "MM/yy"); // Mês de destino é o mês selecionado
+      const selectedDateString = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-01`;
+      const selectedDate = parseISO(selectedDateString);
+
+      if (isNaN(selectedDate)) {
+        return res.status(400).json({ error: "Data selecionada inválida" });
+      }
   
-      // Verificar se já existem entradas (receitas ou despesas) no mês selecionado
+      const currentMonth = format(selectedDate, "MM/yy");
+  
       const existingEntries = await income.findOne({
         where: {
           user_id: user.user_id,
@@ -110,26 +118,24 @@ const revenueController = {
         },
       });
   
-      // Duplicar receitas e despesas para o mês selecionado
       const newRevenues = revenuesLastMonth.map((revenue) => ({
         user_id: revenue.user_id,
-        date: formatDateIso(selectedDate), // Usa o mês selecionado como destino
+        date: format(selectedDate, "yyyy-MM-dd"),
         name: revenue.name,
         value: revenue.value,
         type: "revenue",
-        month_year: currentMonth, // Mês de destino é o mês selecionado
+        month_year: currentMonth, 
       }));
   
       const newExpenses = expensesLastMonth.map((expense) => ({
         user_id: expense.user_id,
-        date: formatDateIso(selectedDate), // Usa o mês selecionado como destino
+        date: format(selectedDate, "yyyy-MM-dd"),
         name: expense.name,
         value: expense.value,
         type: "expense",
-        month_year: currentMonth, // Mês de destino é o mês selecionado
+        month_year: currentMonth, 
       }));
   
-      // Inserir no banco de dados as novas receitas e despesas
       const createdRevenues = await income.bulkCreate(newRevenues);
       const createdExpenses = await income.bulkCreate(newExpenses);
   

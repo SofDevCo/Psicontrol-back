@@ -3,13 +3,13 @@ const router = express.Router();
 const eventController = require("../controllers/eventController");
 const customerController = require("../controllers/customerController");
 const unmatchedPatientsController = require("../controllers/unmatchedPatientsController");
-const authController = require("../controllers/authController")
+const {checkAndHandleCalendars} = require("../controllers/authController");
 const { verifyToken } = require("../middleware/authMiddleware");
 
 router.get("/select-calendar", (req, res) => {
   res.redirect(`${process.env.API_URL}/select-calendar`);
 });
-router.get("/check-calendars", authController.checkAndHandleCalendars);
+router.get("/check-calendars", checkAndHandleCalendars);
 
 // Endpoints para eventos
 router.post("/create-event", eventController.createEvent);
@@ -18,6 +18,7 @@ router.post("/sync-calendar/:calendarId", eventController.syncCalendar);
 router.get("/get-events/:calendarId", eventController.getEventsByCalendar);
 router.get("/get-events", eventController.getEvents);
 router.get("/unmatched-patients", verifyToken, unmatchedPatientsController.getUnmatchedPatients);
+router.delete("/unmatched-patients/:google_event_id", eventController.deleteUnmatchedEvent);
 router.get("/calendars", eventController.listCalendars);
 router.post("/linkCustomerToEvent", customerController.linkCustomerToEvent);
 router.delete(

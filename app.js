@@ -8,24 +8,23 @@ const eventRoutes = require("./routes/eventRoutes");
 const revenueRoutes = require("./routes/revenueRoutes"); 
 const userRoutes = require("./routes/userRoutes");
 const dashBoardRoutes = require("./routes/dashBoardRoutes");
+const messageRoutes = require("./routes/messageRoutes");
 const {
   handleOAuth2Callback,
   initiateGoogleAuth,
 } = require("./controllers/authController");
 const { verifyToken } = require("./middleware/authMiddleware");
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 const corsOptions = {
-  origin: process.env.FRONTEND_URL,
-  credentials: true,
+  origin: "*"
 };
 
 app.use(cors(corsOptions));
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-//app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, "views")));
@@ -44,6 +43,7 @@ app.use("/dashboard", verifyToken, dashBoardRoutes);
 app.use("/user", verifyToken, userRoutes);
 app.get("/auth/google/callback", handleOAuth2Callback);
 require("./cronjob/cronJob");
+app.use("/message", verifyToken, messageRoutes);
 
 app.listen(port, () => {
   console.log(`Servidor rodando em http://localhost:${port}`);
