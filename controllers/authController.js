@@ -102,7 +102,9 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
           console.warn("Evento sem summary:", event);
         }
 
-        const result = fuse.search(summary);
+        const cleanedSummary = summary.replace(/^Paciente\s*-\s*/, '');
+
+        const result = fuse.search(cleanedSummary);
         const bestMatch = result.length > 0 ? result[0].item : null;
         const customerId = bestMatch ? bestMatch.customer_id : null;
 
