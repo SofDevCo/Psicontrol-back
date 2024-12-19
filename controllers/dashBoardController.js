@@ -35,7 +35,7 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
       : [];
     return acc + daysArray.length;
   }, 0);
-  
+
   const totalRevenue = billingRecords.reduce((acc, record) => {
     const daysArray = record.consultation_days
       ? record.consultation_days.split(",").map((day) => day.trim())
@@ -78,12 +78,13 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
       ? record.consultation_days.split(",").map((day) => day.trim())
       : [];
     const numConsultations = daysArray.length;
-  
+
     const consultationFee = parseFloat(record.consultation_fee || 0);
-    const totalConsultationFee = numConsultations * consultationFee;  
+    const totalConsultationFee = numConsultations * consultationFee;
     return {
       ...record.toJSON(),
-      total_consultation_fee: totalConsultationFee > 0 ? totalConsultationFee.toFixed(2) : "0.00",
+      total_consultation_fee:
+        totalConsultationFee > 0 ? totalConsultationFee.toFixed(2) : "0.00",
     };
   });
 
@@ -96,18 +97,18 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
   });
 };
 
-exports.Partialpayment = async (req,res) => {
-  const { customer_id, month_and_year, payment_amount} = req.body;
+exports.Partialpayment = async (req, res) => {
+  const { customer_id, month_and_year, payment_amount } = req.body;
 
-  if (!customer_id || !month_and_year || payment_amount === undefined ){
+  if (!customer_id || !month_and_year || payment_amount === undefined) {
     return res.status(400).json({ error: "Dados incompletos." });
   }
 
   const billingRecord = await CustomersBillingRecords.findOne({
-    where: {customer_id, month_and_year},
+    where: { customer_id, month_and_year },
   });
 
-  if(!billingRecord){
+  if (!billingRecord) {
     return res.status(404).json({ error: "Registro não encontrado." });
   }
 
@@ -121,6 +122,27 @@ exports.Partialpayment = async (req,res) => {
     }
   );
 
-  res.status(200).json({ message: "Pagamento parcial atualizado com sucesso." });
+  res
+    .status(200)
+    .json({ message: "Pagamento parcial atualizado com sucesso." });
+};
 
-}
+
+exports.confirmPayment = async (req,res) => {
+  const { customer_id, month_and_year} = req.body;
+
+  if (!customer_id || !month_and_year) {
+    return res.status(400).json({ error: "Dados incompletos." });
+  }
+  await CustomersBillingRecords.update(
+    {
+      was_charged: true, 
+      payment_status: "pago", 
+    },
+    {
+      where: { customer_id, month_and_year },
+    }
+  );
+
+  res.status(200).json({ message: "Pagamento confirmado com sucesso." });
+};
