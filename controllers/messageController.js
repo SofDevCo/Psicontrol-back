@@ -28,6 +28,12 @@ exports.sendWhatsAppMessage = async (req, res) => {
       customer_id,
       month_and_year: selected_month,
     },
+    attributes: [
+      "consultation_days",
+      "num_consultations",
+      "total_consultation_fee",
+      "sending_invoice",
+    ],
   });
 
   if (!billingRecords || billingRecords.length === 0) {
@@ -78,7 +84,13 @@ exports.sendWhatsAppMessage = async (req, res) => {
   const encodedMessage = encodeURIComponent(renderedMessage);
   const whatsappLink = `https://wa.me/${formattedPhoneNumber}?text=${encodedMessage}`;
 
+  await CustomersBillingRecords.update(
+    { sending_invoice: true },
+    { where: { customer_id, month_and_year: selected_month } }
+  );
+
   res.status(200).json({
+    success: true,
     user_message: renderedMessage,
     whatsappLink,
   });
@@ -111,6 +123,12 @@ exports.sendEmailMessage = async (req, res) => {
       customer_id,
       month_and_year: selected_month,
     },
+    attributes: [
+      "consultation_days",
+      "num_consultations",
+      "total_consultation_fee",
+      "sending_invoice",
+    ],
   });
 
   if (!billingRecords || billingRecords.length === 0) {
@@ -160,6 +178,11 @@ exports.sendEmailMessage = async (req, res) => {
   const customerEmail = customer.customer_email;
   const encodedMessage = encodeURIComponent(renderedMessage);
   const mailtoLink = `mailto:${customerEmail}?subject=Informações&body=${encodedMessage}`;
+
+  await CustomersBillingRecords.update(
+    { sending_invoice: true },
+    { where: { customer_id, month_and_year: selected_month } }
+  );
 
   res.status(200).json({
     user_message: renderedMessage,
