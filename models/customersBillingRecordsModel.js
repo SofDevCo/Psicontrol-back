@@ -62,6 +62,10 @@ const CustomersBillingRecords = sequelize.define(
       type: DataTypes.BOOLEAN,
       allowNull: true,
     },
+    bill_of_sale: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+    }
   },
   {
     tableName: "customers_billing_records",
