@@ -146,3 +146,20 @@ exports.confirmPayment = async (req,res) => {
 
   res.status(200).json({ message: "Pagamento confirmado com sucesso." });
 };
+
+exports.confirmBillOfSale = async (req,res) => {
+  const {customer_id, month_and_year} = req.body;
+
+  if(!customer_id || !month_and_year) {
+    return res.status(400).json({ error: "Dados incompletos." });
+  }
+
+  await CustomersBillingRecords.update(
+    {
+      bill_of_sale: true,
+    },{
+      where: { customer_id, month_and_year },
+    }
+  );
+  res.status(200).json({ message: "Nota fiscal enviada com sucesso!" });
+}
