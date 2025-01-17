@@ -21,10 +21,18 @@ const Customer = sequelize.define(
       type: DataTypes.STRING(255),
       allowNull: false,
     },
+    customer_second_name:{
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    customer_calendar_name:{
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
     customer_cpf_cnpj: {
       type: DataTypes.STRING(14),
-      allowNull: false,
-      defaultValue: false,
+      allowNull: true,
+      defaultValue: true,
     },
     customer_phone: {
       type: DataTypes.STRING(15),
@@ -52,6 +60,10 @@ const Customer = sequelize.define(
     },
     customer_dob: {
       type: DataTypes.DATEONLY,
+      allowNull: true,
+    },
+    customer_personal_message: {
+      type: DataTypes.TEXT,
       allowNull: true,
     }
   },
