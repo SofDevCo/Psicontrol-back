@@ -5,6 +5,8 @@ exports.upsertCustomer = async (userId, customerData) => {
   const {
     customer_id,
     customer_name,
+    customer_second_name,
+    customer_calendar_name,
     customer_cpf_cnpj,
     customer_phone,
     customer_email,
@@ -13,6 +15,7 @@ exports.upsertCustomer = async (userId, customerData) => {
     alternative_name,
     alternative_cpf_cnpj,
     customer_dob,
+    customer_personal_message,
   } = customerData;
 
   if (!customer_name || !customer_cpf_cnpj) {
@@ -40,6 +43,8 @@ exports.upsertCustomer = async (userId, customerData) => {
 
     await customer.update({
       customer_name,
+      customer_second_name,
+      customer_calendar_name,
       customer_cpf_cnpj,
       customer_phone,
       customer_email,
@@ -48,6 +53,7 @@ exports.upsertCustomer = async (userId, customerData) => {
       alternative_name,
       alternative_cpf_cnpj,
       customer_dob: formattedCustomerDob,
+      customer_personal_message,
     });
 
     const billingRecord = await CustomersBillingRecords.findOne({
@@ -72,6 +78,8 @@ exports.upsertCustomer = async (userId, customerData) => {
     const newCustomer = await Customer.create({
       user_id: userId,
       customer_name,
+      customer_second_name,
+      customer_calendar_name,
       customer_cpf_cnpj,
       customer_phone,
       customer_email,
@@ -81,6 +89,7 @@ exports.upsertCustomer = async (userId, customerData) => {
       customer_dob: formattedCustomerDob,
       archived: false,
       consultation_fee,
+      customer_personal_message,
     });
 
     const age = calculateAge(formattedCustomerDob);
