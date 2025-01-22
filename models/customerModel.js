@@ -62,8 +62,24 @@ const Customer = sequelize.define(
       type: DataTypes.DATEONLY,
       allowNull: true,
     },
+    customer_emergency_contact: {
+      type: DataTypes.STRING(15),
+      allowNull: true,
+    },
     customer_personal_message: {
       type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    customer_emergency_name: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    customer_emergency_relationship: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+    },
+    deleted: {
+      type: DataTypes.BOOLEAN,
       allowNull: true,
     }
   },
