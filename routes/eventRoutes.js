@@ -27,9 +27,10 @@ router.delete(
 );
 router.post("/create-customer", customerController.createCustomer);
 router.get("/customers", customerController.getCustomers);
-router.delete("/customers/:customerId", customerController.deleteCustomer);
+router.put("/customers/:customerId", customerController.deleteCustomer);
 router.put("/customers/:customerId", customerController.editCustomer);
 router.get("/customers/:customerId/profile", customerController.getProfileCustomer);
+router.put("/customers/:customerId/message",customerController.updateCustomerMessage);
 router.put("/customers/:customerId/archive", customerController.archiveCustomer);
 router.get("/customers/archived", customerController.getArchivedCustomers); 
 router.post(
