@@ -5,6 +5,8 @@ exports.upsertCustomer = async (userId, customerData) => {
   const {
     customer_id,
     customer_name,
+    customer_second_name,
+    customer_calendar_name,
     customer_cpf_cnpj,
     customer_phone,
     customer_email,
@@ -13,12 +15,14 @@ exports.upsertCustomer = async (userId, customerData) => {
     alternative_name,
     alternative_cpf_cnpj,
     customer_dob,
+    customer_emergency_name,
+    customer_emergency_relationship,
+    customer_emergency_contact,
+    customer_personal_message,
   } = customerData;
 
-  if (!customer_name || !customer_cpf_cnpj) {
-    return res
-      .status(400)
-      .json({ error: "customer_name e customer_cpf_cnpj são obrigatórios." });
+  if (!customer_name) {
+    return res.status(400).json({ error: "customer_name" });
   }
 
   const validPatientStatus =
@@ -28,7 +32,13 @@ exports.upsertCustomer = async (userId, customerData) => {
       ? false
       : null;
 
-  const formattedCustomerDob = formatDateIso(customer_dob);
+  const formattedCustomerDob = customer_dob
+    ? formatDateIso(customer_dob)
+    : null;
+
+  if (customer_dob && !formattedCustomerDob) {
+    return res.status(400).json({ error: "Data de nascimento inválida." });
+  }
 
   if (customer_id) {
     const customer = await Customer.findOne({
@@ -40,6 +50,8 @@ exports.upsertCustomer = async (userId, customerData) => {
 
     await customer.update({
       customer_name,
+      customer_second_name,
+      customer_calendar_name,
       customer_cpf_cnpj,
       customer_phone,
       customer_email,
@@ -47,7 +59,11 @@ exports.upsertCustomer = async (userId, customerData) => {
       patient_status: validPatientStatus,
       alternative_name,
       alternative_cpf_cnpj,
+      customer_emergency_name,
+      customer_emergency_relationship,
+      customer_emergency_contact,
       customer_dob: formattedCustomerDob,
+      customer_personal_message,
     });
 
     const billingRecord = await CustomersBillingRecords.findOne({
@@ -72,6 +88,8 @@ exports.upsertCustomer = async (userId, customerData) => {
     const newCustomer = await Customer.create({
       user_id: userId,
       customer_name,
+      customer_second_name,
+      customer_calendar_name,
       customer_cpf_cnpj,
       customer_phone,
       customer_email,
@@ -80,7 +98,12 @@ exports.upsertCustomer = async (userId, customerData) => {
       alternative_cpf_cnpj,
       customer_dob: formattedCustomerDob,
       archived: false,
+      deleted: false,
       consultation_fee,
+      customer_emergency_name,
+      customer_emergency_relationship,
+      customer_emergency_contact,
+      customer_personal_message,
     });
 
     const age = calculateAge(formattedCustomerDob);
@@ -111,7 +134,7 @@ exports.getCustomers = async (req, res) => {
   }
 
   const customers = await Customer.findAll({
-    where: { user_id: req.user.user_id, archived: false },
+    where: { user_id: req.user.user_id, archived: false, deleted: false },
     include: [
       {
         model: CustomersBillingRecords,
@@ -179,6 +202,7 @@ exports.getProfileCustomer = async (req, res) => {
 exports.deleteCustomer = async (req, res, next) => {
   const { customerId } = req.params;
   const userId = req.user.user_id;
+  const { deleted } = req.body;
 
   const customer = await Customer.findOne({
     where: { customer_id: customerId, user_id: userId },
@@ -190,7 +214,10 @@ exports.deleteCustomer = async (req, res, next) => {
       .json({ error: "Cliente não encontrado ou não autorizado." });
   }
 
-  await Customer.destroy({ where: { customer_id: customerId } });
+  await Customer.update(
+    { deleted: deleted },
+    { where: { customer_id: customerId, user_id: userId } }
+  );
 
   res.status(200).json({ message: "Cliente deletado com sucesso." });
 };

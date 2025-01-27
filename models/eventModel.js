@@ -1,4 +1,4 @@
-const { DataTypes } = require("sequelize");
+const { DataTypes, BOOLEAN } = require("sequelize");
 const { sequelize } = require("../config/database");
 const { Calendar } = require("./calendarModel");
 
@@ -54,6 +54,10 @@ const Event = sequelize.define(
       },
       allowNull: true,
     },
+    deleted: {
+      type: BOOLEAN,
+      allowNull: true,
+    }
   },
   {
     tableName: "events",
