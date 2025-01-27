@@ -188,6 +188,14 @@ exports.getProfileCustomer = async (req, res) => {
 
   const customer = await Customer.findOne({
     where: { customer_id: customerId, user_id: userId },
+    attributes: [
+      "customer_id",
+      "customer_name",
+      "customer_email",
+      "customer_dob",
+      "customer_phone",
+      "customer_personal_message",
+    ],
   });
 
   if (!customer) {
@@ -197,6 +205,24 @@ exports.getProfileCustomer = async (req, res) => {
   const age = calculateAge(customer.customer_dob);
 
   return res.status(200).json({ ...customer.toJSON(), age });
+};
+
+exports.updateCustomerMessage = async (req, res) => {
+  const { customerId } = req.params;
+  const userId = req.user.user_id;
+  const { customer_personal_message } = req.body;
+
+  const customer = await Customer.findOne({
+    where: { customer_id: customerId, user_id: userId },
+  });
+
+  if (!customer) {
+    return res.status(404).json({ error: "Cliente não encontrado." });
+  }
+
+  await customer.update({ customer_personal_message });
+
+  return res.status(200).json({ message: "Mensagem atualizada com sucesso." });
 };
 
 exports.deleteCustomer = async (req, res, next) => {
@@ -214,12 +240,16 @@ exports.deleteCustomer = async (req, res, next) => {
       .json({ error: "Cliente não encontrado ou não autorizado." });
   }
 
-  await Customer.update(
+  const [updated] = await Customer.update(
     { deleted: deleted },
     { where: { customer_id: customerId, user_id: userId } }
   );
 
-  res.status(200).json({ message: "Cliente deletado com sucesso." });
+  if (updated) {
+    res.status(200).json({ message: "Cliente deletado com sucesso." });
+  } else {
+    res.status(500).json({ error: "Erro ao deletar o cliente." });
+  }
 };
 
 exports.archiveCustomer = async (req, res) => {
