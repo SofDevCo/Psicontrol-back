@@ -204,7 +204,12 @@ exports.getProfileCustomer = async (req, res) => {
 
   const age = calculateAge(customer.customer_dob);
 
-  return res.status(200).json({ ...customer.toJSON(), age });
+  const customerData = customer.toJSON();
+  customerData.customer_personal_message = customerData.customer_personal_message
+    ? customerData.customer_personal_message.split("\n").filter(line => line.trim() !== "")
+    : [];
+
+  return res.status(200).json({ ...customerData, age });
 };
 
 exports.updateCustomerMessage = async (req, res) => {
@@ -220,9 +225,22 @@ exports.updateCustomerMessage = async (req, res) => {
     return res.status(404).json({ error: "Cliente não encontrado." });
   }
 
-  await customer.update({ customer_personal_message });
+  const formattedMessage = Array.isArray(customer_personal_message)
+  ? customer_personal_message.join("\n") 
+  : customer_personal_message;
 
-  return res.status(200).json({ message: "Mensagem atualizada com sucesso." });
+  await customer.update({ customer_personal_message: formattedMessage });
+
+  const updatedCustomer = await Customer.findOne({
+    where: { customer_id: customerId, user_id: userId },
+    attributes: ["customer_personal_message"],
+  });
+
+  const responseMessage = updatedCustomer.customer_personal_message
+    ? updatedCustomer.customer_personal_message.split("\n").filter(line => line.trim() !== "")
+    : [];
+
+  return res.status(200).json({ customer_personal_message: responseMessage });
 };
 
 exports.deleteCustomer = async (req, res, next) => {
