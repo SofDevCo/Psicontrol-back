@@ -196,6 +196,12 @@ exports.getProfileCustomer = async (req, res) => {
       "customer_phone",
       "customer_personal_message",
     ],
+    include: [
+      {
+        model: CustomersBillingRecords,
+        attributes: ["consultation_days", "consultation_fee", "month_and_year"],
+      },
+    ],
   });
 
   if (!customer) {
@@ -205,11 +211,54 @@ exports.getProfileCustomer = async (req, res) => {
   const age = calculateAge(customer.customer_dob);
 
   const customerData = customer.toJSON();
-  customerData.customer_personal_message = customerData.customer_personal_message
-    ? customerData.customer_personal_message.split("\n").filter(line => line.trim() !== "")
-    : [];
+  customerData.customer_personal_message =
+    customerData.customer_personal_message
+      ? customerData.customer_personal_message
+          .split("\n")
+          .filter((line) => line.trim() !== "")
+      : [];
 
-  return res.status(200).json({ ...customerData, age });
+  const groupedBilling = {};
+
+  customerData.CustomersBillingRecords.forEach((record) => {
+    const { month_and_year, consultation_days, consultation_fee } = record;
+
+    if (!groupedBilling[month_and_year]) {
+      groupedBilling[month_and_year] = {
+        month: month_and_year,
+        num_consultations: 0,
+        total_consultation_fee: 0,
+        consultation_fee: parseFloat(consultation_fee || 0),
+        consultation_days: [],
+      };
+    }
+
+    const daysArray = consultation_days
+      ? consultation_days.split(".").map((day) => day.trim(), 10)
+      : [];
+    const numConsultations = daysArray.length;
+    const consultationFee = parseFloat(consultation_fee || 0);
+
+    groupedBilling[month_and_year].num_consultations += numConsultations;
+    groupedBilling[month_and_year].total_consultation_fee +=
+      numConsultations * consultationFee;
+    groupedBilling[month_and_year].consultation_days = [
+      ...groupedBilling[month_and_year].consultation_days,
+      ...daysArray,
+    ];
+  });
+
+  const formatedBilling = Object.values(groupedBilling).map((item) => ({
+    ...item,
+    customer_id: customer.customer_id,
+    consultation_days: item.consultation_days.sort((a, b) => a - b).join(", "),
+    consultation_fee: item.consultation_fee || 0,
+    total_consultation_fee: item.total_consultation_fee.toFixed(2),
+  }));
+
+  return res
+    .status(200)
+    .json({ ...customerData, age, billingRecords: formatedBilling });
 };
 
 exports.updateCustomerMessage = async (req, res) => {
@@ -226,8 +275,8 @@ exports.updateCustomerMessage = async (req, res) => {
   }
 
   const formattedMessage = Array.isArray(customer_personal_message)
-  ? customer_personal_message.join("\n") 
-  : customer_personal_message;
+    ? customer_personal_message.join("\n")
+    : customer_personal_message;
 
   await customer.update({ customer_personal_message: formattedMessage });
 
@@ -237,7 +286,9 @@ exports.updateCustomerMessage = async (req, res) => {
   });
 
   const responseMessage = updatedCustomer.customer_personal_message
-    ? updatedCustomer.customer_personal_message.split("\n").filter(line => line.trim() !== "")
+    ? updatedCustomer.customer_personal_message
+        .split("\n")
+        .filter((line) => line.trim() !== "")
     : [];
 
   return res.status(200).json({ customer_personal_message: responseMessage });
