@@ -199,7 +199,15 @@ exports.getProfileCustomer = async (req, res) => {
     include: [
       {
         model: CustomersBillingRecords,
-        attributes: ["consultation_days", "consultation_fee", "month_and_year"],
+        attributes: [
+          "consultation_days",
+          "consultation_fee",
+          "month_and_year",
+          "sending_invoice",
+          "payment_status",
+          "bill_of_sale",
+          "payment_amount",
+        ],
       },
     ],
   });
@@ -248,13 +256,25 @@ exports.getProfileCustomer = async (req, res) => {
     ];
   });
 
-  const formatedBilling = Object.values(groupedBilling).map((item) => ({
-    ...item,
-    customer_id: customer.customer_id,
-    consultation_days: item.consultation_days.sort((a, b) => a - b).join(", "),
-    consultation_fee: item.consultation_fee || 0,
-    total_consultation_fee: item.total_consultation_fee.toFixed(2),
-  }));
+  const formatedBilling = Object.values(groupedBilling).map((item) => {
+    const matchingRecord = customerData.CustomersBillingRecords.find(
+      (record) => record.month_and_year === item.month
+    );
+
+    return {
+      ...item,
+      customer_id: customer.customer_id,
+      consultation_days: item.consultation_days
+        .sort((a, b) => a - b)
+        .join(", "),
+      consultation_fee: item.consultation_fee || 0,
+      total_consultation_fee: item.total_consultation_fee.toFixed(2),
+      sending_invoice: matchingRecord?.sending_invoice || false,
+      payment_status: matchingRecord?.payment_status || "pendente",
+      bill_of_sale: matchingRecord?.bill_of_sale || false,
+      payment_amount: parseFloat(matchingRecord?.payment_amount || 0),
+    };
+  });
 
   return res
     .status(200)
