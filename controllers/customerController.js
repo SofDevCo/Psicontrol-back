@@ -63,7 +63,6 @@ exports.upsertCustomer = async (userId, customerData) => {
       customer_emergency_relationship,
       customer_emergency_contact,
       customer_dob: formattedCustomerDob,
-      customer_personal_message,
     });
 
     const billingRecord = await CustomersBillingRecords.findOne({
@@ -103,7 +102,6 @@ exports.upsertCustomer = async (userId, customerData) => {
       customer_emergency_name,
       customer_emergency_relationship,
       customer_emergency_contact,
-      customer_personal_message,
     });
 
     const age = calculateAge(formattedCustomerDob);
@@ -191,6 +189,7 @@ exports.getProfileCustomer = async (req, res) => {
     attributes: [
       "customer_id",
       "customer_name",
+      "customer_calendar_name",
       "customer_email",
       "customer_dob",
       "customer_phone",
