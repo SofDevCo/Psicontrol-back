@@ -27,7 +27,7 @@ router.delete(
 );
 router.post("/create-customer", customerController.createCustomer);
 router.get("/customers", customerController.getCustomers);
-router.put("/customers/:customerId", customerController.deleteCustomer);
+router.put("/customers/:customerId/delete", customerController.deleteCustomer);
 router.put("/customers/:customerId", customerController.editCustomer);
 router.get("/customers/:customerId/profile", customerController.getProfileCustomer);
 router.put("/customers/:customerId/message",customerController.updateCustomerMessage);
