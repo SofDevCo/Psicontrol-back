@@ -1,5 +1,6 @@
 const { cpf, cnpj } = require("cpf-cnpj-validator");
 const { parsePhoneNumberFromString } = require("libphonenumber-js");
+const validator = require("validator");
 
 exports.validateCPFOrCNPJ = (documentNumber) => {
   const cleanNumber = documentNumber.replace(/\D/g, "");
@@ -43,4 +44,11 @@ exports.validatePhoneNumber = (phoneNumber, country = "BR") => {
   }
 
   return { isValid: true, formatted: cleaned };
+};
+
+exports.validateEmail = (email) => {
+  if (!email || !validator.isEmail(email)) {
+    return { isValid: false, message: "E-email inválido" };
+  }
+  return { isValid: true, formatted: email.trim().toLowerCase() };
 };

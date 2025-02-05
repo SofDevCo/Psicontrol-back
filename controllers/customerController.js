@@ -2,6 +2,7 @@ const { Customer, User, Event, CustomersBillingRecords } = require("../models");
 const { formatDateIso, calculateAge } = require("../utils/dateUtils");
 const { validateCPFOrCNPJ } = require("../utils/Validators");
 const { validatePhoneNumber } = require("../utils/Validators");
+const { validateEmail } = require("../utils/Validators");
 
 exports.upsertCustomer = async (userId, customerData) => {
   const {
@@ -33,6 +34,13 @@ exports.upsertCustomer = async (userId, customerData) => {
 
   if (alternative_cpf_cnpj && !validateCPFOrCNPJ(alternative_cpf_cnpj)) {
     return res.status(400).json({ error: "CPF/CNPJ alternativo inválido" });
+  }
+
+  if (customer_email) {
+    const emailValidation = validateEmail(customer_email);
+    if (!emailValidation.isValid) {
+      return res.status(400).json({ error: emailValidation.message });
+    }
   }
 
   const formattedCustomerPhone = customer_phone
@@ -131,7 +139,7 @@ exports.upsertCustomer = async (userId, customerData) => {
       consultation_fee,
       customer_emergency_name,
       customer_emergency_relationship,
-      customer_emergency_contact: formattedEmergencyContactm
+      customer_emergency_contact: formattedEmergencyContactm,
     });
 
     const age = calculateAge(formattedCustomerDob);
