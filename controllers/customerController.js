@@ -1,5 +1,6 @@
 const { Customer, User, Event, CustomersBillingRecords } = require("../models");
 const { formatDateIso, calculateAge } = require("../utils/dateUtils");
+const { validateCPFOrCNPJ } = require("../utils/Validators");
 
 exports.upsertCustomer = async (userId, customerData) => {
   const {
@@ -23,6 +24,14 @@ exports.upsertCustomer = async (userId, customerData) => {
 
   if (!customer_name) {
     return res.status(400).json({ error: "customer_name" });
+  }
+
+  if (customer_cpf_cnpj && !validateCPFOrCNPJ(customer_cpf_cnpj)) {
+    return res.status(400).json({ error: "CPF/CNPJ inválido" });
+  }
+
+  if (alternative_cpf_cnpj && !validateCPFOrCNPJ(alternative_cpf_cnpj)) {
+    return res.status(400).json({ error: "CPF/CNPJ alternativo inválido" });
   }
 
   const validPatientStatus =
@@ -189,11 +198,14 @@ exports.getProfileCustomer = async (req, res) => {
     attributes: [
       "customer_id",
       "customer_name",
+      "customer_cpf_cnpj",
+      "alternative_cpf_cnpj",
       "customer_calendar_name",
       "customer_email",
       "customer_dob",
       "customer_phone",
       "customer_personal_message",
+      "customer_dob",
     ],
     include: [
       {
