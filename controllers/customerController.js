@@ -1,6 +1,7 @@
 const { Customer, User, Event, CustomersBillingRecords } = require("../models");
 const { formatDateIso, calculateAge } = require("../utils/dateUtils");
 const { validateCPFOrCNPJ } = require("../utils/Validators");
+const { validatePhoneNumber } = require("../utils/Validators");
 
 exports.upsertCustomer = async (userId, customerData) => {
   const {
@@ -34,6 +35,26 @@ exports.upsertCustomer = async (userId, customerData) => {
     return res.status(400).json({ error: "CPF/CNPJ alternativo inválido" });
   }
 
+  const formattedCustomerPhone = customer_phone
+    ? (() => {
+        const validation = validatePhoneNumber(customer_phone);
+        if (!validation.isValid) {
+          throw { status: 400, message: validation.message };
+        }
+        return validation.formatted;
+      })()
+    : null;
+
+  const formattedEmergencyContact = customer_emergency_contact
+    ? (() => {
+        const validation = validatePhoneNumber(customer_emergency_contact);
+        if (!validation.isValid) {
+          throw { status: 400, message: validation.message };
+        }
+        return validation.formatted;
+      })()
+    : null;
+
   const validPatientStatus =
     patient_status === "true"
       ? true
@@ -62,7 +83,7 @@ exports.upsertCustomer = async (userId, customerData) => {
       customer_second_name,
       customer_calendar_name,
       customer_cpf_cnpj,
-      customer_phone,
+      customer_phone: formattedCustomerPhone,
       customer_email,
       consultation_fee,
       patient_status: validPatientStatus,
@@ -70,7 +91,7 @@ exports.upsertCustomer = async (userId, customerData) => {
       alternative_cpf_cnpj,
       customer_emergency_name,
       customer_emergency_relationship,
-      customer_emergency_contact,
+      customer_emergency_contact: formattedEmergencyContact,
       customer_dob: formattedCustomerDob,
     });
 
@@ -99,7 +120,7 @@ exports.upsertCustomer = async (userId, customerData) => {
       customer_second_name,
       customer_calendar_name,
       customer_cpf_cnpj,
-      customer_phone,
+      customer_phone: formattedCustomerPhone,
       customer_email,
       patient_status: validPatientStatus,
       alternative_name,
@@ -110,7 +131,7 @@ exports.upsertCustomer = async (userId, customerData) => {
       consultation_fee,
       customer_emergency_name,
       customer_emergency_relationship,
-      customer_emergency_contact,
+      customer_emergency_contact: formattedEmergencyContactm
     });
 
     const age = calculateAge(formattedCustomerDob);
