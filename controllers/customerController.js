@@ -47,7 +47,7 @@ exports.upsertCustomer = async (userId, customerData) => {
     ? (() => {
         const validation = validatePhoneNumber(customer_phone);
         if (!validation.isValid) {
-          throw { status: 400, message: validation.message };
+          return { status: 400, message: validation.message };
         }
         return validation.formatted;
       })()
@@ -57,7 +57,7 @@ exports.upsertCustomer = async (userId, customerData) => {
     ? (() => {
         const validation = validatePhoneNumber(customer_emergency_contact);
         if (!validation.isValid) {
-          throw { status: 400, message: validation.message };
+          return { status: 400, message: validation.message };
         }
         return validation.formatted;
       })()
@@ -139,7 +139,7 @@ exports.upsertCustomer = async (userId, customerData) => {
       consultation_fee,
       customer_emergency_name,
       customer_emergency_relationship,
-      customer_emergency_contact: formattedEmergencyContactm,
+      customer_emergency_contact: formattedEmergencyContact,
     });
 
     const age = calculateAge(formattedCustomerDob);
