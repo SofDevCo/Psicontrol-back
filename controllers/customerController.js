@@ -227,6 +227,7 @@ exports.getProfileCustomer = async (req, res) => {
     attributes: [
       "customer_id",
       "customer_name",
+      "customer_second_name",
       "customer_cpf_cnpj",
       "alternative_cpf_cnpj",
       "customer_calendar_name",
