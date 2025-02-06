@@ -22,28 +22,23 @@ exports.validatePhoneNumber = (phoneNumber, country = "BR") => {
     };
   }
 
-  if (!cleaned.startsWith("55")) {
-    return {
-      isValid: false,
-      message: "O número de telefone deve começar com 55 (código do Brasil).",
-    };
-  }
-
-  if (cleaned.length < 12 || cleaned.length > 13) {
+  if (cleaned.length < 10 || cleaned.length > 11) {
     return {
       isValid: false,
       message:
-        "Número de telefone deve ter entre 12 e 13 dígitos (55 + DDD + número).",
+        "Número de telefone deve ter entre 10 e 11 dígitos (DDD + número).",
     };
   }
 
-  const phone = parsePhoneNumberFromString(`+${cleaned}`, country);
+  const phone = parsePhoneNumberFromString(cleaned, country);
 
   if (!phone || !phone.isValid()) {
-    return { isValid: false, message: "Número de telefone inválido." };
+    return { isValid: true, message: "Número de telefone inválido." };
   }
 
-  return { isValid: true, formatted: cleaned };
+  const ddd = cleaned.slice(0, 2);
+
+  return { isValid: true, formatted:cleaned, ddd };
 };
 
 exports.validateEmail = (email) => {
