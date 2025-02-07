@@ -1,5 +1,8 @@
 const { Customer, User, Event, CustomersBillingRecords } = require("../models");
 const { formatDateIso, calculateAge } = require("../utils/dateUtils");
+const { validateCPFOrCNPJ } = require("../utils/Validators");
+const { validatePhoneNumber } = require("../utils/Validators");
+const { validateEmail } = require("../utils/Validators");
 
 exports.upsertCustomer = async (userId, customerData) => {
   const {
@@ -24,6 +27,41 @@ exports.upsertCustomer = async (userId, customerData) => {
   if (!customer_name) {
     return res.status(400).json({ error: "customer_name" });
   }
+
+  if (customer_cpf_cnpj && !validateCPFOrCNPJ(customer_cpf_cnpj)) {
+    return res.status(400).json({ error: "CPF/CNPJ inválido" });
+  }
+
+  if (alternative_cpf_cnpj && !validateCPFOrCNPJ(alternative_cpf_cnpj)) {
+    return res.status(400).json({ error: "CPF/CNPJ alternativo inválido" });
+  }
+
+  if (customer_email) {
+    const emailValidation = validateEmail(customer_email);
+    if (!emailValidation.isValid) {
+      return res.status(400).json({ error: emailValidation.message });
+    }
+  }
+
+  const formattedCustomerPhone = customer_phone
+    ? (() => {
+        const validation = validatePhoneNumber(customer_phone);
+        if (!validation.isValid) {
+          return { status: 400, message: validation.message };
+        }
+        return validation.formatted;
+      })()
+    : null;
+
+  const formattedEmergencyContact = customer_emergency_contact
+    ? (() => {
+        const validation = validatePhoneNumber(customer_emergency_contact);
+        if (!validation.isValid) {
+          return { status: 400, message: validation.message };
+        }
+        return validation.formatted;
+      })()
+    : null;
 
   const validPatientStatus =
     patient_status === "true"
@@ -53,7 +91,7 @@ exports.upsertCustomer = async (userId, customerData) => {
       customer_second_name,
       customer_calendar_name,
       customer_cpf_cnpj,
-      customer_phone,
+      customer_phone: formattedCustomerPhone,
       customer_email,
       consultation_fee,
       patient_status: validPatientStatus,
@@ -61,9 +99,8 @@ exports.upsertCustomer = async (userId, customerData) => {
       alternative_cpf_cnpj,
       customer_emergency_name,
       customer_emergency_relationship,
-      customer_emergency_contact,
+      customer_emergency_contact: formattedEmergencyContact,
       customer_dob: formattedCustomerDob,
-      customer_personal_message,
     });
 
     const billingRecord = await CustomersBillingRecords.findOne({
@@ -91,7 +128,7 @@ exports.upsertCustomer = async (userId, customerData) => {
       customer_second_name,
       customer_calendar_name,
       customer_cpf_cnpj,
-      customer_phone,
+      customer_phone: formattedCustomerPhone,
       customer_email,
       patient_status: validPatientStatus,
       alternative_name,
@@ -102,8 +139,7 @@ exports.upsertCustomer = async (userId, customerData) => {
       consultation_fee,
       customer_emergency_name,
       customer_emergency_relationship,
-      customer_emergency_contact,
-      customer_personal_message,
+      customer_emergency_contact: formattedEmergencyContact,
     });
 
     const age = calculateAge(formattedCustomerDob);
@@ -191,10 +227,15 @@ exports.getProfileCustomer = async (req, res) => {
     attributes: [
       "customer_id",
       "customer_name",
+      "customer_second_name",
+      "customer_cpf_cnpj",
+      "alternative_cpf_cnpj",
+      "customer_calendar_name",
       "customer_email",
       "customer_dob",
       "customer_phone",
       "customer_personal_message",
+      "customer_dob",
     ],
     include: [
       {
