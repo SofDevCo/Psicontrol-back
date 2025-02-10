@@ -421,15 +421,23 @@ exports.linkCustomerToEvent = async (req, res) => {
   const userId = req.user.user_id;
 
   const event = await Event.findOne({
-    where: { customers_id: eventId, user_id: userId },
+    where: { google_event_id: eventId, user_id: userId },
   });
 
   if (!event) {
     return res.status(404).json({ error: "Evento não encontrado." });
   }
 
-  event.customer_id = customer_id;
-  await event.save();
+  await Event.update(
+    { customer_id },
+    {
+      where: {
+        event_name: event.event_name,
+        user_id: userId,
+        customer_id: null,
+      },
+    }
+  );
 
   res
     .status(200)
