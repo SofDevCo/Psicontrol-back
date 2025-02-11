@@ -1,4 +1,6 @@
 const { google } = require("googleapis");
+const { Op } = require("sequelize");
+
 const {
   createEvent: saveEvent,
   cancelEventByGoogleId,
@@ -147,15 +149,6 @@ const checkEventExists = async (googleEventId, calendarId) => {
   } catch (error) {}
 };
 
-exports.getEvents = async (req, res) => {
-  try {
-    const events = await Event.find({ where: { user_id: req.user.user_id } });
-    res.json(events);
-  } catch (error) {
-    res.status(500).send("Erro interno do servidor.");
-  }
-};
-
 exports.syncCalendar = async (req, res) => {
   const { calendarId } = req.params;
 
@@ -207,16 +200,17 @@ exports.listCalendars = async (req, res) => {
 };
 
 exports.getEventsByCalendar = async (req, res) => {
-  try {
-    const { calendarId } = req.params;
+  const { calendarId } = req.params;
 
-    const events = await Event.findAll({
-      where: { calendar_id: calendarId, user_id: req.user.user_id },
-    });
-    res.json(events);
-  } catch (error) {
-    res.status(500).json({ error: "Erro ao buscar eventos." });
-  }
+  const events = await Event.findAll({
+    where: {
+      calendar_id: calendarId,
+      user_id: req.user.user_id,
+      status: { [Op.notIn]: ["cancelado"] }
+    },
+  });
+
+  res.json(events);
 };
 
 exports.saveSelectedCalendars = async (req, res) => {
