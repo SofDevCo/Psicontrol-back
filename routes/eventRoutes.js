@@ -16,7 +16,6 @@ router.post("/create-event", eventController.createEvent);
 router.post("/sync-calendar", eventController.syncCalendar);
 router.post("/sync-calendar/:calendarId", eventController.syncCalendar);
 router.get("/get-events/:calendarId", eventController.getEventsByCalendar);
-router.get("/get-events", eventController.getEvents);
 router.get("/unmatched-patients", verifyToken, unmatchedPatientsController.getUnmatchedPatients);
 router.delete("/unmatched-patients/:google_event_id", eventController.deleteUnmatchedEvent);
 router.get("/calendars", eventController.listCalendars);
