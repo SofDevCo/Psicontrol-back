@@ -1,4 +1,5 @@
 const { Customer, User, Event, CustomersBillingRecords } = require("../models");
+const { updateConsultationDays } = require("../utils/updateConsultationDays");
 const { formatDateIso, calculateAge } = require("../utils/dateUtils");
 const { validateCPFOrCNPJ } = require("../utils/Validators");
 const { validatePhoneNumber } = require("../utils/Validators");
@@ -438,7 +439,13 @@ exports.linkCustomerToEvent = async (req, res) => {
       },
     }
   );
+  const patient = await Customer.findOne({
+    where: { customer_id, user_id: userId },
+  });
 
+  if (patient) {
+    await updateConsultationDays(patient.customer_id);
+  }
   res
     .status(200)
     .json({ message: "Paciente vinculado com sucesso ao evento!" });
