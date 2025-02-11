@@ -19,13 +19,11 @@ const syncAllCalendars = async () => {
       const newAccessToken = await refreshAccessToken(refreshToken);
       await updateAccessToken(user_id, newAccessToken);
 
-      await syncGoogleCalendarWithDatabase(newAccessToken); 
+      await syncGoogleCalendarWithDatabase(newAccessToken);
     }
   }
 };
 
 cron.schedule("5 * * * *", async () => {
-  try {
-    await syncAllCalendars();
-  } catch (error) {}
+  await syncAllCalendars();
 });

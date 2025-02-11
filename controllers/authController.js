@@ -12,11 +12,8 @@ const CLIENT_TIMEZONE = "America/Sao_Paulo";
 
 const fetchGoogleCalendars = async (accessToken) => {
   oauth2Client.setCredentials({ access_token: accessToken });
-
-  try {
-    const response = await calendar.calendarList.list();
-    return response.data.items;
-  } catch (error) {}
+  const response = await calendar.calendarList.list();
+  return response.data.items;
 };
 
 const fetchGoogleCalendarEvents = async (accessToken, calendarId) => {
@@ -213,78 +210,67 @@ async function handleOAuth2Callback(req, res) {
     return res.status(400).send("Código de autorização ausente.");
   }
 
-  try {
-    const { tokens } = await oauth2Client.getToken(code);
-    oauth2Client.setCredentials({ access_token: tokens.access_token });
+  const { tokens } = await oauth2Client.getToken(code);
+  oauth2Client.setCredentials({ access_token: tokens.access_token });
 
-    const calendars = await listCalendars();
+  const calendars = await listCalendars();
 
-    let oauth2 = google.oauth2({
-      auth: oauth2Client,
-      version: "v2",
+  let oauth2 = google.oauth2({
+    auth: oauth2Client,
+    version: "v2",
+  });
+
+  const { data } = await oauth2.userinfo.get();
+
+  if (!data.email) {
+    return res.status(400).json({
+      statusCode: 400,
+      message: "Email não encontrado.",
     });
-
-    const { data } = await oauth2.userinfo.get();
-
-    if (!data.email) {
-      return res.status(400).json({
-        statusCode: 400,
-        message: "Email não encontrado.",
-      });
-    }
-
-    await saveTokens(
-      data.name,
-      data.email,
-      tokens.access_token,
-      tokens.refresh_token
-    );
-
-    const authenticationToken = bcrypt.hashSync(new Date().toISOString(), 10);
-
-    const user = await User.findOne({ where: { user_email: data.email } });
-    user.autentication_token = authenticationToken;
-    await user.save();
-
-    await syncGoogleCalendarWithDatabase(tokens.access_token);
-
-    res.redirect(
-      `${process.env.FRONTEND_URL}/token?token=${authenticationToken}`
-    );
-  } catch (error) {
-    res.status(500).send("Erro ao concluir a autenticação.");
   }
+
+  await saveTokens(
+    data.name,
+    data.email,
+    tokens.access_token,
+    tokens.refresh_token
+  );
+
+  const authenticationToken = bcrypt.hashSync(new Date().toISOString(), 10);
+
+  const user = await User.findOne({ where: { user_email: data.email } });
+  user.autentication_token = authenticationToken;
+  await user.save();
+
+  await syncGoogleCalendarWithDatabase(tokens.access_token);
+
+  res.redirect(
+    `${process.env.FRONTEND_URL}/token?token=${authenticationToken}`
+  );
 }
 
 const checkAndHandleCalendars = async (req, res) => {
-  try {
-    const userId = req.user?.user_id;
+  const userId = req.user?.user_id;
 
-    if (!userId) {
-      return res.status(401).json({ error: "Usuário não autenticado." });
-    }
-
-    const enabledCalendars = await Calendar.findAll({
-      where: { user_id: userId, enabled: true },
-    });
-
-    if (!enabledCalendars || enabledCalendars.length === 0) {
-      console.log("Nenhum calendário habilitado. Redirecionando para seleção.");
-      return res.json({ redirect: "/select-calendar" });
-    }
-
-    const calendarIds = enabledCalendars.map(
-      (calendar) => calendar.calendar_id
-    );
-    console.log("Calendários habilitados encontrados:", calendarIds);
-
-    return res.json({
-      redirect: `/create-event-form?calendarIds=${calendarIds.join(",")}`,
-    });
-  } catch (error) {
-    console.error("Erro ao verificar calendários:", error);
-    res.status(500).json({ error: "Erro interno ao verificar calendários." });
+  if (!userId) {
+    return res.status(401).json({ error: "Usuário não autenticado." });
   }
+
+  const enabledCalendars = await Calendar.findAll({
+    where: { user_id: userId, enabled: true },
+  });
+
+  if (!enabledCalendars || enabledCalendars.length === 0) {
+    console.log("Nenhum calendário habilitado. Redirecionando para seleção.");
+    return res.json({ redirect: "/select-calendar" });
+  }
+
+  const calendarIds = enabledCalendars.map((calendar) => calendar.calendar_id);
+  console.log("Calendários habilitados encontrados:", calendarIds);
+
+  return res.json({
+    redirect: `/create-event-form?calendarIds=${calendarIds.join(",")}`,
+  });
 };
 
 module.exports = {
