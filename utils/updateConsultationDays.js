@@ -1,9 +1,10 @@
 const { format, parseISO } = require("date-fns");
 const { Event, CustomersBillingRecords, Customer } = require("../models");
+const { Op } = require("sequelize");
 
 const updateConsultationDays = async (customerId) => {
   const events = await Event.findAll({
-    where: { customer_id: customerId },
+    where: { customer_id: customerId, status: { [Op.notIn]: ["cancelado"] } },
     attributes: ["date"],
   });
 
@@ -11,13 +12,13 @@ const updateConsultationDays = async (customerId) => {
     const [year, month] = event.date.split("-");
     const monthYear = `${year}-${month}`;
     if (!acc[monthYear]) acc[monthYear] = [];
-    
+
     const day = format(parseISO(event.date), "dd");
     acc[monthYear].push(day);
-    
+
     return acc;
   }, {});
-  
+
   const consultationFee = await Customer.findOne({
     where: { customer_id: customerId },
     attributes: ["consultation_fee"],
@@ -49,7 +50,9 @@ const updateConsultationDays = async (customerId) => {
 };
 
 const recalculateAllConsultationDays = async () => {
-  const customers = await CustomersBillingRecords.findAll({ attributes: ["customer_id"] });
+  const customers = await CustomersBillingRecords.findAll({
+    attributes: ["customer_id"],
+  });
 
   for (const customer of customers) {
     await updateConsultationDays(customer.customer_id);
