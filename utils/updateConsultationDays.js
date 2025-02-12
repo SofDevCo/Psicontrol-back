@@ -31,11 +31,16 @@ const updateConsultationDays = async (customerId) => {
       where: { customer_id: customerId, month_and_year: monthYear },
     });
 
+    if (existingRecord && existingRecord.deleted) {
+      continue;
+    }
+
     if (existingRecord) {
       await existingRecord.update({
         consultation_days: days.join(", "),
         num_consultations: numConsultations,
         consultation_fee: consultationFee.consultation_fee || 0.0,
+        deleted: existingRecord.deleted,
       });
     } else {
       await CustomersBillingRecords.create({

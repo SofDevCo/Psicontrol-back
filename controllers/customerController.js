@@ -4,6 +4,9 @@ const { formatDateIso, calculateAge } = require("../utils/dateUtils");
 const { validateCPFOrCNPJ } = require("../utils/Validators");
 const { validatePhoneNumber } = require("../utils/Validators");
 const { validateEmail } = require("../utils/Validators");
+const { parseISO, isAfter: dateFnsIsAfter, format } = require("date-fns");
+const { Op } = require("sequelize");
+const { cancelEventByGoogleId } = require("../services/eventService");
 
 exports.upsertCustomer = async (userId, customerData) => {
   const {
@@ -364,23 +367,68 @@ exports.deleteCustomer = async (req, res, next) => {
   const customer = await Customer.findOne({
     where: { customer_id: customerId, user_id: userId },
   });
-
   if (!customer) {
     return res
       .status(404)
       .json({ error: "Cliente não encontrado ou não autorizado." });
   }
 
+  const deletionDate = new Date();
+
   const [updated] = await Customer.update(
     { deleted: deleted },
     { where: { customer_id: customerId, user_id: userId } }
   );
 
-  if (updated) {
-    res.status(200).json({ message: "Cliente deletado com sucesso." });
-  } else {
-    res.status(500).json({ error: "Erro ao deletar o cliente." });
+  if (!updated) {
+    return res.status(500).json({ error: "Erro ao deletar o cliente." });
   }
+
+  const events = await Event.findAll({
+    where: { customer_id: customerId, status: { [Op.notIn]: ["cancelado"] } },
+    attributes: ["date", "google_event_id"],
+  });
+
+  for (const event of events) {
+    const eventDate = parseISO(event.date);
+    if (dateFnsIsAfter(eventDate, deletionDate)) {
+      if (event.google_event_id) {
+        await cancelEventByGoogleId(event.google_event_id);
+      }
+    }
+  }
+
+  const deletionMonthYear = format(deletionDate, "yyyy-MM");
+
+  await CustomersBillingRecords.update(
+    { deleted: true },
+    {
+      where: {
+        customer_id: customerId,
+        month_and_year: { [Op.gt]: deletionMonthYear },
+      },
+    }
+  );
+
+  const currentRecord = await CustomersBillingRecords.findOne({
+    where: { customer_id: customerId, month_and_year: deletionMonthYear },
+  });
+  if (currentRecord && currentRecord.consultation_days) {
+    const deletionDay = parseInt(format(deletionDate, "dd"), 10);
+    const daysArray = currentRecord.consultation_days
+      .split(",")
+      .map((day) => day.trim())
+      .filter((day) => parseInt(day, 10) <= deletionDay);
+
+    await currentRecord.update({
+      consultation_days: daysArray.join(", "),
+      num_consultations: daysArray.length,
+    });
+  }
+
+  await updateConsultationDays(customerId);
+
+  return res.status(200).json({ message: "Cliente deletado com sucesso." });
 };
 
 exports.archiveCustomer = async (req, res) => {
