@@ -65,6 +65,10 @@ const CustomersBillingRecords = sequelize.define(
     bill_of_sale: {
       type: DataTypes.BOOLEAN,
       allowNull: true,
+    },
+    deleted:{
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
     }
   },
   {
