@@ -130,13 +130,15 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
         endTime = null;
       }
 
+   const existingEvent = await Event.findOne({where: {google_event_id: event.id}})
+
       if (customerId) {
         if (eventExists) {
           await Event.update(
             {
               event_name: event.summary,
               date: startDate,
-              status: event.status,
+              status: existingEvent?.status === "cancelado" ? "cancelado" : event.status,
               calendar_id: calendarId,
               start_time: startTime,
               end_time: endTime,
