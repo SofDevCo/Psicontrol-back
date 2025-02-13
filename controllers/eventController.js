@@ -105,13 +105,19 @@ exports.deleteUnmatchedEvent = async (req, res) => {
     return res.status(404).send("Evento não encontrado ou já sincronizado.");
   }
 
-  await event.destroy();
+  await Event.update(
+    { status: "cancelado" },
+    {
+      where: {
+        user_id: req.user.user_id,
+        event_name: event.event_name.trim(),
+        customer_id: null,
+      },
+    }
+  );
 
   if (event.google_event_id) {
-    await deleteEventFromGoogleCalendar(
-      event.calendar_id,
-      event.google_event_id
-    );
+    await cancelEventByGoogleId(event.google_event_id);
   }
 
   res.send("Evento excluído com sucesso.");
