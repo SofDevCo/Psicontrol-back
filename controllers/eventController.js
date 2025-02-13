@@ -35,8 +35,7 @@ const createEventInGoogleCalendar = async (event, calendarId) => {
   });
   return response.data.id;
 };
-
-const deleteEventFromGoogleCalendar = async (calendarId, googleEventId) => {
+exports.deleteEventFromGoogleCalendar = async (calendarId, googleEventId) => {
   await authenticateClient();
   const calendar = google.calendar({ version: "v3", auth: oauth2Client });
   await calendar.events.delete({
