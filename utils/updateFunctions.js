@@ -54,6 +54,59 @@ const updateConsultationDays = async (customerId) => {
   }
 };
 
+const updateConsultationFee = async (customerId, newFee) => {
+  const now = new Date();
+  const currentMonthStr = now.toISOString().slice(0, 7);
+
+  const billingRecords = await CustomersBillingRecords.findAll({
+    where: {
+      customer_id: customerId,
+      month_and_year: { [Op.gte]: currentMonthStr },
+    },
+  });
+
+  if (billingRecords.length === 0) return;
+
+  const currentMonthRecord = billingRecords.find(
+    (record) => record.month_and_year === currentMonthStr
+  );
+
+  if (!currentMonthRecord) {
+    await CustomersBillingRecords.update(
+      { consultation_fee: newFee },
+      {
+        where: {
+          customer_id: customerId,
+          month_and_year: { [Op.gt]: currentMonthStr },
+        },
+      }
+    );
+    return;
+  }
+
+  if (currentMonthRecord.consultation_fee === newFee) {
+    await CustomersBillingRecords.update(
+      { consultation_fee: newFee },
+      {
+        where: {
+          customer_id: customerId,
+          month_and_year: { [Op.gte]: currentMonthStr },
+        },
+      }
+    );
+  } else {
+    await CustomersBillingRecords.update(
+      { consultation_fee: newFee },
+      {
+        where: {
+          customer_id: customerId,
+          month_and_year: { [Op.gt]: currentMonthStr },
+        },
+      }
+    );
+  }
+};
+
 const recalculateAllConsultationDays = async () => {
   const customers = await CustomersBillingRecords.findAll({
     attributes: ["customer_id"],
@@ -64,4 +117,8 @@ const recalculateAllConsultationDays = async () => {
   }
 };
 
-module.exports = { updateConsultationDays, recalculateAllConsultationDays };
+module.exports = {
+  updateConsultationDays,
+  recalculateAllConsultationDays,
+  updateConsultationFee,
+};
