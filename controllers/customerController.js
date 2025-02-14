@@ -7,6 +7,9 @@ const { validateEmail } = require("../utils/Validators");
 const { parseISO, isAfter: dateFnsIsAfter, format } = require("date-fns");
 const { Op } = require("sequelize");
 const { cancelEventByGoogleId } = require("../services/eventService");
+const {
+  deleteEventFromGoogleCalendar,
+} = require("../controllers/eventController");
 
 exports.upsertCustomer = async (userId, customerData) => {
   const {
@@ -359,7 +362,7 @@ exports.updateCustomerMessage = async (req, res) => {
   return res.status(200).json({ customer_personal_message: responseMessage });
 };
 
-exports.deleteCustomer = async (req, res, next) => {
+exports.deleteCustomer = async (req, res) => {
   const { customerId } = req.params;
   const userId = req.user.user_id;
   const { deleted } = req.body;
@@ -444,12 +447,62 @@ exports.archiveCustomer = async (req, res) => {
     return res.status(404).json({ error: "Cliente não encontrado." });
   }
 
-  await Customer.update(
+  const archiveDate = new Date();
+
+  const [archive] = await Customer.update(
     { archived: archived },
     { where: { customer_id: customerId, user_id: userId } }
   );
 
-  res.status(200).json({ message: "Cliente arquivado com sucesso." });
+  if (!archive) {
+    res.status(200).json({ message: "Cliente arquivado com sucesso." });
+  }
+
+  const events = await Event.findAll({
+    where: { customer_id: customerId, status: { [Op.notIn]: ["cancelado"] } },
+    attributes: ["date", "google_event_id"],
+  });
+
+  for (const event of events) {
+    const eventDate = parseISO(event.date);
+    if (dateFnsIsAfter(eventDate, archiveDate)) {
+      if (event.google_event_id) {
+        await cancelEventByGoogleId(event.google_event_id);
+      }
+    }
+  }
+
+  const archivedMonthYear = format(archiveDate, "yyyy-MM");
+
+  await CustomersBillingRecords.update(
+    { archived: true },
+    {
+      where: {
+        customer_id: customerId,
+        month_and_year: { [Op.gt]: archivedMonthYear },
+      },
+    }
+  );
+
+  const currentRecord = await CustomersBillingRecords.findOne({
+    where: { customer_id: customerId, month_and_year: archivedMonthYear },
+  });
+  if (currentRecord && currentRecord.consultation_days) {
+    const archiveDay = parseInt(format(archiveDate, "dd"), 10);
+    const daysArray = currentRecord.consultation_days
+      .split(",")
+      .map((day) => day.trim())
+      .filter((day) => parseInt(day, 10) <= archiveDay);
+
+    await currentRecord.update({
+      consultation_days: daysArray.join(", "),
+      num_consultations: daysArray.length,
+    });
+  }
+
+  await updateConsultationDays(customerId);
+
+  return res.status(200).json({ message: "Cliente deletado com sucesso." });
 };
 
 exports.getArchivedCustomers = async (req, res) => {
