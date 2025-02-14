@@ -1,5 +1,8 @@
 const { Customer, User, Event, CustomersBillingRecords } = require("../models");
-const { updateConsultationDays } = require("../utils/updateConsultationDays");
+const {
+  updateConsultationDays,
+  updateConsultationFee,
+} = require("../utils/updateFunctions");
 const { formatDateIso, calculateAge } = require("../utils/dateUtils");
 const { validateCPFOrCNPJ } = require("../utils/Validators");
 const { validatePhoneNumber } = require("../utils/Validators");
@@ -28,7 +31,6 @@ exports.upsertCustomer = async (userId, customerData) => {
     customer_emergency_name,
     customer_emergency_relationship,
     customer_emergency_contact,
-    customer_personal_message,
   } = customerData;
 
   if (!customer_name) {
@@ -109,6 +111,11 @@ exports.upsertCustomer = async (userId, customerData) => {
       customer_emergency_contact: formattedEmergencyContact,
       customer_dob: formattedCustomerDob,
     });
+
+    await updateConsultationFee(
+      customer.customer_id,
+      parseFloat(consultation_fee) || 0.0
+    );
 
     const billingRecord = await CustomersBillingRecords.findOne({
       where: { customer_id: customer.customer_id },
