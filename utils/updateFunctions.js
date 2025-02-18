@@ -3,6 +3,11 @@ const { Event, CustomersBillingRecords, Customer } = require("../models");
 const { Op } = require("sequelize");
 
 const updateConsultationDays = async (customerId) => {
+  const billingRecords = await CustomersBillingRecords.findAll({
+    where: { customer_id: customerId },
+    order: [["month_and_year", "DESC"]],
+  });
+
   const events = await Event.findAll({
     where: { customer_id: customerId, status: { [Op.notIn]: ["cancelado"] } },
     attributes: ["date"],
@@ -19,12 +24,13 @@ const updateConsultationDays = async (customerId) => {
     return acc;
   }, {});
 
-  const consultationFee = await Customer.findOne({
-    where: { customer_id: customerId },
-    attributes: ["consultation_fee"],
-  });
-
   for (const [monthYear, days] of Object.entries(daysByMonthYear)) {
+    const applicableFeeRecord = billingRecords.find(
+      (record) => record.month_and_year <= monthYear
+    );
+
+    const consultationFee = applicableFeeRecord?.consultation_fee || 0.0;
+
     const numConsultations = days.length;
 
     const existingRecord = await CustomersBillingRecords.findOne({
@@ -39,7 +45,6 @@ const updateConsultationDays = async (customerId) => {
       await existingRecord.update({
         consultation_days: days.join(", "),
         num_consultations: numConsultations,
-        consultation_fee: consultationFee.consultation_fee || 0.0,
         deleted: existingRecord.deleted,
       });
     } else {
@@ -48,63 +53,63 @@ const updateConsultationDays = async (customerId) => {
         month_and_year: monthYear,
         consultation_days: days.join(", "),
         num_consultations: numConsultations,
-        consultation_fee: consultationFee.consultation_fee || 0.0,
+        consultation_fee: consultationFee,
+        fee_updated_at: new Date(),
       });
     }
   }
 };
 
-const updateConsultationFee = async (customerId, newFee) => {
+const updateConsultationFee = async (customerId, newFee, updateFrom) => {
   const now = new Date();
-  const currentMonthStr = now.toISOString().slice(0, 7);
+  let targetMonthYear;
 
-  const billingRecords = await CustomersBillingRecords.findAll({
+  const formatDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    return `${year}-${month}`;
+  };
+
+  if (updateFrom === "current_month") {
+    targetMonthYear = formatDate(now);
+  } else {
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    targetMonthYear = formatDate(nextMonth);
+  }
+
+  const existingRecord = await CustomersBillingRecords.findOne({
     where: {
       customer_id: customerId,
-      month_and_year: { [Op.gte]: currentMonthStr },
+      month_and_year: targetMonthYear,
     },
   });
 
-  if (billingRecords.length === 0) return;
-
-  const currentMonthRecord = billingRecords.find(
-    (record) => record.month_and_year === currentMonthStr
-  );
-
-  if (!currentMonthRecord) {
-    await CustomersBillingRecords.update(
-      { consultation_fee: newFee },
-      {
-        where: {
-          customer_id: customerId,
-          month_and_year: { [Op.gt]: currentMonthStr },
-        },
-      }
-    );
-    return;
-  }
-
-  if (currentMonthRecord.consultation_fee === newFee) {
-    await CustomersBillingRecords.update(
-      { consultation_fee: newFee },
-      {
-        where: {
-          customer_id: customerId,
-          month_and_year: { [Op.gte]: currentMonthStr },
-        },
-      }
-    );
+  if (existingRecord) {
+    await existingRecord.update({
+      consultation_fee: newFee,
+      fee_updated_at: new Date(),
+    });
   } else {
-    await CustomersBillingRecords.update(
-      { consultation_fee: newFee },
-      {
-        where: {
-          customer_id: customerId,
-          month_and_year: { [Op.gt]: currentMonthStr },
-        },
-      }
-    );
+    await CustomersBillingRecords.create({
+      customer_id: customerId,
+      month_and_year: targetMonthYear,
+      consultation_fee: newFee,
+      fee_updated_at: new Date(),
+    });
   }
+
+  const operator = updateFrom === "current_month" ? Op.gte : Op.gt;
+
+  await CustomersBillingRecords.update(
+    { consultation_fee: newFee },
+    {
+      where: {
+        customer_id: customerId,
+        month_and_year: { [operator]: targetMonthYear },
+        fee_updated_at: null,
+      },
+    }
+  );
 };
 
 const recalculateAllConsultationDays = async () => {
