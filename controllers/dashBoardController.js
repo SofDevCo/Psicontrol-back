@@ -19,7 +19,7 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
   const billingRecords = await CustomersBillingRecords.findAll({
     where: {
       month_and_year: { [Op.like]: `${year}-${month.padStart(2, "0")}%` },
-      deleted: false,
+      deleted: null,
     },
     include: [
       {
