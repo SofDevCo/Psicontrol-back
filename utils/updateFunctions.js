@@ -62,7 +62,6 @@ const updateConsultationDays = async (customerId) => {
 
 const updateConsultationFee = async (customerId, newFee, updateFrom) => {
   const now = new Date();
-  let targetMonthYear;
 
   const formatDate = (date) => {
     const year = date.getFullYear();
@@ -70,46 +69,51 @@ const updateConsultationFee = async (customerId, newFee, updateFrom) => {
     return `${year}-${month}`;
   };
 
+  const currentMonthYear = formatDate(new Date());
+  const nextMonthYear = formatDate(
+    new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  );
+
   if (updateFrom === "current_month") {
-    targetMonthYear = formatDate(now);
-  } else {
-    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    targetMonthYear = formatDate(nextMonth);
-  }
-
-  const existingRecord = await CustomersBillingRecords.findOne({
-    where: {
-      customer_id: customerId,
-      month_and_year: targetMonthYear,
-    },
-  });
-
-  if (existingRecord) {
-    await existingRecord.update({
-      consultation_fee: newFee,
-      fee_updated_at: new Date(),
-    });
-  } else {
-    await CustomersBillingRecords.create({
-      customer_id: customerId,
-      month_and_year: targetMonthYear,
-      consultation_fee: newFee,
-      fee_updated_at: new Date(),
-    });
-  }
-
-  const operator = updateFrom === "current_month" ? Op.gte : Op.gt;
-
-  await CustomersBillingRecords.update(
-    { consultation_fee: newFee },
-    {
+    const existingRecord = await CustomersBillingRecords.findOne({
       where: {
         customer_id: customerId,
-        month_and_year: { [operator]: targetMonthYear },
-        fee_updated_at: null,
+        month_and_year: currentMonthYear,
       },
+    });
+
+    if (existingRecord) {
+      await existingRecord.update({
+        consultation_fee: newFee,
+        fee_updated_at: new Date(),
+      });
     }
-  );
+  }
+
+  let futureRecordsCondition = {
+    customer_id: customerId,
+    month_and_year:
+      updateFrom === "current_month"
+        ? { [Op.gte]: currentMonthYear }
+        : { [Op.gte]: nextMonthYear },
+  };
+
+  const futureRecords = await CustomersBillingRecords.findAll({
+    where: futureRecordsCondition,
+    order: [["month_and_year", "ASC"]],
+  });
+
+  if (futureRecords.length > 0) {
+    await CustomersBillingRecords.update(
+      {
+        consultation_fee: newFee,
+        fee_updated_at: new Date(),
+      },
+      {
+        where: futureRecordsCondition,
+      }
+    );
+  }
 };
 
 const recalculateAllConsultationDays = async () => {

@@ -3,16 +3,19 @@ const {
   updateConsultationDays,
   updateConsultationFee,
 } = require("../utils/updateFunctions");
-const { formatDateIso, calculateAge } = require("../utils/dateUtils");
-const { validateCPFOrCNPJ } = require("../utils/Validators");
-const { validatePhoneNumber } = require("../utils/Validators");
-const { validateEmail } = require("../utils/Validators");
+const {
+  formatDateIso,
+  calculateAge,
+  formatDate,
+} = require("../utils/dateUtils");
+const {
+  validateCPFOrCNPJ,
+  validatePhoneNumber,
+  validateEmail,
+} = require("../utils/Validators");
 const { parseISO, isAfter: dateFnsIsAfter, format } = require("date-fns");
 const { Op } = require("sequelize");
 const { cancelEventByGoogleId } = require("../services/eventService");
-const {
-  deleteEventFromGoogleCalendar,
-} = require("../controllers/eventController");
 
 exports.upsertCustomer = async (userId, customerData) => {
   const {
@@ -114,23 +117,30 @@ exports.upsertCustomer = async (userId, customerData) => {
 
     await updateConsultationFee(
       customer.customer_id,
-      parseFloat(consultation_fee) || 0.0
+      parseFloat(consultation_fee) || 0.0,
+      customerData.update_from
     );
 
-    const billingRecord = await CustomersBillingRecords.findOne({
-      where: { customer_id: customer.customer_id },
-    });
-
-    if (billingRecord) {
-      await billingRecord.update({
-        consultation_fee: parseFloat(consultation_fee) || 0.0,
+    if (customerData.update_from === "current_month" || customerData.update_from === "current") {
+      const currentMonthYear = formatDate(new Date());
+      const billingRecord = await CustomersBillingRecords.findOne({
+        where: {
+          customer_id: customer.customer_id,
+          month_and_year: currentMonthYear,
+        },
       });
-    } else {
-      await CustomersBillingRecords.create({
-        customer_id: customer.customer_id,
-        month_and_year: null,
-        consultation_fee: parseFloat(consultation_fee) || 0.0,
-      });
+    
+      if (billingRecord) {
+        await billingRecord.update({
+          consultation_fee: parseFloat(consultation_fee) || 0.0,
+        });
+      } else {
+        await CustomersBillingRecords.create({
+          customer_id: customer.customer_id,
+          month_and_year: currentMonthYear,
+          consultation_fee: parseFloat(consultation_fee) || 0.0,
+        });
+      }
     }
 
     const age = calculateAge(formattedCustomerDob);
