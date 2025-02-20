@@ -121,7 +121,10 @@ exports.upsertCustomer = async (userId, customerData) => {
       customerData.update_from
     );
 
-    if (customerData.update_from === "current_month" || customerData.update_from === "current") {
+    if (
+      customerData.update_from === "current_month" ||
+      customerData.update_from === "current"
+    ) {
       const currentMonthYear = formatDate(new Date());
       const billingRecord = await CustomersBillingRecords.findOne({
         where: {
@@ -129,7 +132,7 @@ exports.upsertCustomer = async (userId, customerData) => {
           month_and_year: currentMonthYear,
         },
       });
-    
+
       if (billingRecord) {
         await billingRecord.update({
           consultation_fee: parseFloat(consultation_fee) || 0.0,
@@ -251,6 +254,7 @@ exports.getProfileCustomer = async (req, res) => {
     attributes: [
       "customer_id",
       "customer_name",
+      "consultation_fee",
       "customer_second_name",
       "customer_cpf_cnpj",
       "alternative_cpf_cnpj",
