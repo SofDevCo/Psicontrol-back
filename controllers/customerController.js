@@ -1,4 +1,4 @@
-const { Customer, User, Event, CustomersBillingRecords } = require("../models");
+const { Customer, Event, CustomersBillingRecords } = require("../models");
 const {
   updateConsultationDays,
   updateConsultationFee,
