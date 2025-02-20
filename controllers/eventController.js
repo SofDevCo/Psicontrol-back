@@ -236,17 +236,33 @@ exports.saveSelectedCalendars = async (req, res) => {
 };
 
 exports.addConsultationDay = async (req, res) => {
-  const { customerId, day, calendarId } = req.body;
-  if (!customerId || !day || !calendarId) {
-    return res.status(400).json({
-      error: "Os campos 'customerId', 'day' e 'calendarId' são obrigatórios.",
-    });
+  const { customerId, day } = req.body;
+
+  if (!customerId || !day) {
+    return res
+      .status(400)
+      .json({ error: "Os campos 'customerId' e 'day' são obrigatórios." });
   }
 
   const customer = await Customer.findByPk(customerId);
   if (!customer) {
     return res.status(404).json({ error: "Paciente não encontrado." });
   }
+
+  const latestEvent = await Event.findOne({
+    where: { customer_id: customerId },
+    order: [["created_at", "DESC"]],
+  });
+
+  if (!latestEvent) {
+    return res
+      .status(400)
+      .json({
+        error: "Não foi possível encontrar o calendarId para esse paciente.",
+      });
+  }
+
+  const calendarId = latestEvent.calendar_id;
 
   const today = new Date();
   const monthYear = `${today.getFullYear()}-${String(
@@ -284,6 +300,7 @@ exports.addConsultationDay = async (req, res) => {
   }
 
   const formattedDate = `${monthYear}-${day.padStart(2, "0")}`;
+
   const event = {
     event_name: customer.customer_name,
     date: formattedDate,
@@ -302,7 +319,7 @@ exports.addConsultationDay = async (req, res) => {
     customer_id: customerId,
   });
 
-  res.status(200).json({
+  return res.status(200).json({
     message: "Dia adicionado e evento criado no Google Calendar com sucesso.",
   });
 };
@@ -310,18 +327,24 @@ exports.addConsultationDay = async (req, res) => {
 exports.removeConsultationDay = async (req, res) => {
   const { customerId, day } = req.body;
   if (!customerId || !day) {
-    return res.status(400).json({ error: "Os campos 'customerId' e 'day' são obrigatórios." });
+    return res
+      .status(400)
+      .json({ error: "Os campos 'customerId' e 'day' são obrigatórios." });
   }
 
   const today = new Date();
-  const monthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+  const monthYear = `${today.getFullYear()}-${String(
+    today.getMonth() + 1
+  ).padStart(2, "0")}`;
 
   const billingRecord = await CustomersBillingRecords.findOne({
     where: { customer_id: customerId, month_and_year: monthYear },
   });
 
   if (!billingRecord) {
-    return res.status(404).json({ error: "Registro de faturamento não encontrado." });
+    return res
+      .status(404)
+      .json({ error: "Registro de faturamento não encontrado." });
   }
 
   let consultationDays = billingRecord.consultation_days
@@ -335,7 +358,8 @@ exports.removeConsultationDay = async (req, res) => {
   consultationDays = consultationDays.filter((d) => d !== day);
 
   await billingRecord.update({
-    consultation_days: consultationDays.length > 0 ? consultationDays.join(", ") : null,
+    consultation_days:
+      consultationDays.length > 0 ? consultationDays.join(", ") : null,
     num_consultations: consultationDays.length,
   });
 
@@ -354,6 +378,7 @@ exports.removeConsultationDay = async (req, res) => {
     );
   }
 
-  res.status(200).json({ message: "Dia removido e evento cancelado com sucesso." });
+  res
+    .status(200)
+    .json({ message: "Dia removido e evento cancelado com sucesso." });
 };
-
