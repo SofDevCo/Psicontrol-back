@@ -15,15 +15,13 @@ router.get("/check-calendars", checkAndHandleCalendars);
 router.post("/create-event", eventController.createEvent);
 router.post("/sync-calendar", eventController.syncCalendar);
 router.post("/sync-calendar/:calendarId", eventController.syncCalendar);
+router.post("/add-day", eventController.addConsultationDay);
 router.get("/get-events/:calendarId", eventController.getEventsByCalendar);
 router.get("/unmatched-patients", verifyToken, unmatchedPatientsController.getUnmatchedPatients);
 router.patch("/unmatched-patients/:google_event_id", eventController.deleteUnmatchedEvent);
 router.get("/calendars", eventController.listCalendars);
 router.post("/linkCustomerToEvent", customerController.linkCustomerToEvent);
-router.delete(
-  "/cancel/:google_event_id/:calendarId",
-  eventController.deleteEvent
-);
+router.delete("/cancel/:google_event_id/:calendarId",eventController.deleteEvent);
 router.post("/create-customer", customerController.createCustomer);
 router.get("/customers", customerController.getCustomers);
 router.put("/customers/:customerId/delete", customerController.deleteCustomer);
@@ -32,9 +30,6 @@ router.get("/customers/:customerId/profile", customerController.getProfileCustom
 router.put("/customers/:customerId/message",customerController.updateCustomerMessage);
 router.put("/customers/:customerId/archive", customerController.archiveCustomer);
 router.get("/customers/archived", customerController.getArchivedCustomers); 
-router.post(
-  "/calendars/selection/:calendarId",
-  eventController.saveSelectedCalendars
-);
+router.post("/calendars/selection/:calendarId",eventController.saveSelectedCalendars);
 
 module.exports = router;

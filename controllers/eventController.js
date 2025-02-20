@@ -1,13 +1,18 @@
 const { google } = require("googleapis");
 const { Op } = require("sequelize");
-
 const {
   createEvent: saveEvent,
   cancelEventByGoogleId,
 } = require("../services/eventService");
 const { syncGoogleCalendarWithDatabase } = require("./authController");
 const { oauth2Client } = require("../config/oauth2");
-const { Event, Calendar } = require("../models");
+const {
+  Event,
+  Calendar,
+  CustomersBillingRecords,
+  Customer,
+} = require("../models");
+const e = require("express");
 
 const authenticateClient = async () => {
   if (!oauth2Client.credentials || !oauth2Client.credentials.access_token) {
@@ -18,23 +23,28 @@ const authenticateClient = async () => {
 
 const createEventInGoogleCalendar = async (event, calendarId) => {
   const calendar = google.calendar({ version: "v3", auth: oauth2Client });
+
+  const resource = {
+    summary: event.event_name,
+    description: "Evento criado automaticamente",
+    start: {
+      date: event.date, 
+      timeZone: "America/Sao_Paulo",
+    },
+    end: {
+      date: event.date, 
+      timeZone: "America/Sao_Paulo",
+    },
+  };
+
   const response = await calendar.events.insert({
     calendarId: calendarId,
-    resource: {
-      summary: event.event_name,
-      description: "Evento criado",
-      start: {
-        dateTime: `${event.date}T${event.start_time}:00`,
-        timeZone: "America/Sao_Paulo",
-      },
-      end: {
-        dateTime: `${event.date}T${event.end_time}:00`,
-        timeZone: "America/Sao_Paulo",
-      },
-    },
+    resource,
   });
+
   return response.data.id;
 };
+
 exports.deleteEventFromGoogleCalendar = async (calendarId, googleEventId) => {
   await authenticateClient();
   const calendar = google.calendar({ version: "v3", auth: oauth2Client });
@@ -223,4 +233,80 @@ exports.saveSelectedCalendars = async (req, res) => {
     });
     res.status(201).json({ message: "Calendário criado com sucesso!" });
   }
+};
+
+exports.addConsultationDay = async (req, res) => {
+  const { customerId, day, calendarId } = req.body;
+  if (!customerId || !day || !calendarId) {
+    return res
+      .status(400)
+      .json({
+        error: "Os campos 'customerId', 'day' e 'calendarId' são obrigatórios.",
+      });
+  }
+
+  const customer = await Customer.findByPk(customerId);
+  if (!customer) {
+    return res.status(404).json({ error: "Paciente não encontrado." });
+  }
+
+  const today = new Date();
+  const monthYear = `${today.getFullYear()}-${String(
+    today.getMonth() + 1
+  ).padStart(2, "0")}`;
+
+  let billingRecord = await CustomersBillingRecords.findOne({
+    where: { customer_id: customerId, month_and_year: monthYear },
+  });
+
+  const consultationDays = billingRecord?.consultation_days
+    ? billingRecord.consultation_days.split(", ")
+    : [];
+
+  if (consultationDays.includes(day)) {
+    return res.status(400).json({ error: "Este dia já está registrado." });
+  }
+
+  consultationDays.push(day);
+  consultationDays.sort((a, b) => a - b);
+
+  if (billingRecord) {
+    await billingRecord.update({
+      consultation_days: consultationDays.join(", "),
+      num_consultations: consultationDays.length,
+    });
+  } else {
+    await CustomersBillingRecords.create({
+      customer_id: customerId,
+      month_and_year: monthYear,
+      consultation_days: day,
+      num_consultations: 1,
+      consultation_fee: customer.consultation_fee || 0.0,
+    });
+  }
+
+  const formattedDate = `${monthYear}-${day.padStart(2, "0")}`;
+  const event = {
+    event_name: customer.customer_name,
+    date: formattedDate,
+    calendarId,
+  };
+
+  const googleEventId = await createEventInGoogleCalendar(event, calendarId);
+
+  await Event.create({
+    event_name: customer.customer_name,
+    date: formattedDate,
+    calendar_id: calendarId,
+    google_event_id: googleEventId,
+    status: "confirmed",
+    user_id: customer.user_id,
+    customer_id: customerId,
+  });
+
+  res
+    .status(200)
+    .json({
+      message: "Dia adicionado e evento criado no Google Calendar com sucesso.",
+    });
 };
