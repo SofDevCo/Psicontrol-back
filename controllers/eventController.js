@@ -28,11 +28,11 @@ const createEventInGoogleCalendar = async (event, calendarId) => {
     summary: event.event_name,
     description: "Evento criado automaticamente",
     start: {
-      date: event.date, 
+      date: event.date,
       timeZone: "America/Sao_Paulo",
     },
     end: {
-      date: event.date, 
+      date: event.date,
       timeZone: "America/Sao_Paulo",
     },
   };
@@ -238,11 +238,9 @@ exports.saveSelectedCalendars = async (req, res) => {
 exports.addConsultationDay = async (req, res) => {
   const { customerId, day, calendarId } = req.body;
   if (!customerId || !day || !calendarId) {
-    return res
-      .status(400)
-      .json({
-        error: "Os campos 'customerId', 'day' e 'calendarId' são obrigatórios.",
-      });
+    return res.status(400).json({
+      error: "Os campos 'customerId', 'day' e 'calendarId' são obrigatórios.",
+    });
   }
 
   const customer = await Customer.findByPk(customerId);
@@ -304,9 +302,58 @@ exports.addConsultationDay = async (req, res) => {
     customer_id: customerId,
   });
 
-  res
-    .status(200)
-    .json({
-      message: "Dia adicionado e evento criado no Google Calendar com sucesso.",
-    });
+  res.status(200).json({
+    message: "Dia adicionado e evento criado no Google Calendar com sucesso.",
+  });
 };
+
+exports.removeConsultationDay = async (req, res) => {
+  const { customerId, day } = req.body;
+  if (!customerId || !day) {
+    return res.status(400).json({ error: "Os campos 'customerId' e 'day' são obrigatórios." });
+  }
+
+  const today = new Date();
+  const monthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+
+  const billingRecord = await CustomersBillingRecords.findOne({
+    where: { customer_id: customerId, month_and_year: monthYear },
+  });
+
+  if (!billingRecord) {
+    return res.status(404).json({ error: "Registro de faturamento não encontrado." });
+  }
+
+  let consultationDays = billingRecord.consultation_days
+    ? billingRecord.consultation_days.split(",").map((d) => d.trim())
+    : [];
+
+  if (!consultationDays.includes(day)) {
+    return res.status(400).json({ error: "Este dia não está registrado." });
+  }
+
+  consultationDays = consultationDays.filter((d) => d !== day);
+
+  await billingRecord.update({
+    consultation_days: consultationDays.length > 0 ? consultationDays.join(", ") : null,
+    num_consultations: consultationDays.length,
+  });
+
+  const event = await Event.findOne({
+    where: {
+      customer_id: customerId,
+      date: `${monthYear}-${day.padStart(2, "0")}`,
+      status: { [Op.not]: "cancelado" },
+    },
+  });
+
+  if (event) {
+    await Event.update(
+      { status: "cancelado" },
+      { where: { google_event_id: event.google_event_id } }
+    );
+  }
+
+  res.status(200).json({ message: "Dia removido e evento cancelado com sucesso." });
+};
+
