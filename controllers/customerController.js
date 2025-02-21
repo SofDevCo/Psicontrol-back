@@ -311,7 +311,7 @@ exports.getProfileCustomer = async (req, res) => {
     }
 
     const daysArray = consultation_days
-      ? consultation_days.split(".").map((day) => day.trim(), 10)
+      ? consultation_days.split(",").map((day) => day.trim(), 10)
       : [];
     const numConsultations = daysArray.length;
     const consultationFee = parseFloat(consultation_fee || 0);
