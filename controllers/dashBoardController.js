@@ -19,6 +19,7 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
   const billingRecords = await CustomersBillingRecords.findAll({
     where: {
       month_and_year: { [Op.like]: `${year}-${month.padStart(2, "0")}%` },
+      deleted: null,
     },
     include: [
       {
@@ -127,17 +128,16 @@ exports.Partialpayment = async (req, res) => {
     .json({ message: "Pagamento parcial atualizado com sucesso." });
 };
 
-
-exports.confirmPayment = async (req,res) => {
-  const { customer_id, month_and_year} = req.body;
+exports.confirmPayment = async (req, res) => {
+  const { customer_id, month_and_year } = req.body;
 
   if (!customer_id || !month_and_year) {
     return res.status(400).json({ error: "Dados incompletos." });
   }
   await CustomersBillingRecords.update(
     {
-      was_charged: true, 
-      payment_status: "pago", 
+      was_charged: true,
+      payment_status: "pago",
     },
     {
       where: { customer_id, month_and_year },
@@ -147,19 +147,20 @@ exports.confirmPayment = async (req,res) => {
   res.status(200).json({ message: "Pagamento confirmado com sucesso." });
 };
 
-exports.confirmBillOfSale = async (req,res) => {
-  const {customer_id, month_and_year} = req.body;
+exports.confirmBillOfSale = async (req, res) => {
+  const { customer_id, month_and_year } = req.body;
 
-  if(!customer_id || !month_and_year) {
+  if (!customer_id || !month_and_year) {
     return res.status(400).json({ error: "Dados incompletos." });
   }
 
   await CustomersBillingRecords.update(
     {
       bill_of_sale: true,
-    },{
+    },
+    {
       where: { customer_id, month_and_year },
     }
   );
   res.status(200).json({ message: "Nota fiscal enviada com sucesso!" });
-}
+};

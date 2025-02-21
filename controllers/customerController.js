@@ -1,8 +1,21 @@
-const { Customer, User, Event, CustomersBillingRecords } = require("../models");
-const { formatDateIso, calculateAge } = require("../utils/dateUtils");
-const { validateCPFOrCNPJ } = require("../utils/Validators");
-const { validatePhoneNumber } = require("../utils/Validators");
-const { validateEmail } = require("../utils/Validators");
+const { Customer, Event, CustomersBillingRecords } = require("../models");
+const {
+  updateConsultationDays,
+  updateConsultationFee,
+} = require("../utils/updateFunctions");
+const {
+  formatDateIso,
+  calculateAge,
+  formatDate,
+} = require("../utils/dateUtils");
+const {
+  validateCPFOrCNPJ,
+  validatePhoneNumber,
+  validateEmail,
+} = require("../utils/Validators");
+const { parseISO, isAfter: dateFnsIsAfter, format } = require("date-fns");
+const { Op } = require("sequelize");
+const { cancelEventByGoogleId } = require("../services/eventService");
 
 exports.upsertCustomer = async (userId, customerData) => {
   const {
@@ -21,7 +34,6 @@ exports.upsertCustomer = async (userId, customerData) => {
     customer_emergency_name,
     customer_emergency_relationship,
     customer_emergency_contact,
-    customer_personal_message,
   } = customerData;
 
   if (!customer_name) {
@@ -103,20 +115,35 @@ exports.upsertCustomer = async (userId, customerData) => {
       customer_dob: formattedCustomerDob,
     });
 
-    const billingRecord = await CustomersBillingRecords.findOne({
-      where: { customer_id: customer.customer_id },
-    });
+    await updateConsultationFee(
+      customer.customer_id,
+      parseFloat(consultation_fee) || 0.0,
+      customerData.update_from
+    );
 
-    if (billingRecord) {
-      await billingRecord.update({
-        consultation_fee: parseFloat(consultation_fee) || 0.0,
+    if (
+      customerData.update_from === "current_month" ||
+      customerData.update_from === "current"
+    ) {
+      const currentMonthYear = formatDate(new Date());
+      const billingRecord = await CustomersBillingRecords.findOne({
+        where: {
+          customer_id: customer.customer_id,
+          month_and_year: currentMonthYear,
+        },
       });
-    } else {
-      await CustomersBillingRecords.create({
-        customer_id: customer.customer_id,
-        month_and_year: null,
-        consultation_fee: parseFloat(consultation_fee) || 0.0,
-      });
+
+      if (billingRecord) {
+        await billingRecord.update({
+          consultation_fee: parseFloat(consultation_fee) || 0.0,
+        });
+      } else {
+        await CustomersBillingRecords.create({
+          customer_id: customer.customer_id,
+          month_and_year: currentMonthYear,
+          consultation_fee: parseFloat(consultation_fee) || 0.0,
+        });
+      }
     }
 
     const age = calculateAge(formattedCustomerDob);
@@ -227,6 +254,7 @@ exports.getProfileCustomer = async (req, res) => {
     attributes: [
       "customer_id",
       "customer_name",
+      "consultation_fee",
       "customer_second_name",
       "customer_cpf_cnpj",
       "alternative_cpf_cnpj",
@@ -283,7 +311,7 @@ exports.getProfileCustomer = async (req, res) => {
     }
 
     const daysArray = consultation_days
-      ? consultation_days.split(".").map((day) => day.trim(), 10)
+      ? consultation_days.split(",").map((day) => day.trim(), 10)
       : [];
     const numConsultations = daysArray.length;
     const consultationFee = parseFloat(consultation_fee || 0);
@@ -355,7 +383,7 @@ exports.updateCustomerMessage = async (req, res) => {
   return res.status(200).json({ customer_personal_message: responseMessage });
 };
 
-exports.deleteCustomer = async (req, res, next) => {
+exports.deleteCustomer = async (req, res) => {
   const { customerId } = req.params;
   const userId = req.user.user_id;
   const { deleted } = req.body;
@@ -363,23 +391,68 @@ exports.deleteCustomer = async (req, res, next) => {
   const customer = await Customer.findOne({
     where: { customer_id: customerId, user_id: userId },
   });
-
   if (!customer) {
     return res
       .status(404)
       .json({ error: "Cliente não encontrado ou não autorizado." });
   }
 
+  const deletionDate = new Date();
+
   const [updated] = await Customer.update(
     { deleted: deleted },
     { where: { customer_id: customerId, user_id: userId } }
   );
 
-  if (updated) {
-    res.status(200).json({ message: "Cliente deletado com sucesso." });
-  } else {
-    res.status(500).json({ error: "Erro ao deletar o cliente." });
+  if (!updated) {
+    return res.status(500).json({ error: "Erro ao deletar o cliente." });
   }
+
+  const events = await Event.findAll({
+    where: { customer_id: customerId, status: { [Op.notIn]: ["cancelado"] } },
+    attributes: ["date", "google_event_id"],
+  });
+
+  for (const event of events) {
+    const eventDate = parseISO(event.date);
+    if (dateFnsIsAfter(eventDate, deletionDate)) {
+      if (event.google_event_id) {
+        await cancelEventByGoogleId(event.google_event_id);
+      }
+    }
+  }
+
+  const deletionMonthYear = format(deletionDate, "yyyy-MM");
+
+  await CustomersBillingRecords.update(
+    { deleted: true },
+    {
+      where: {
+        customer_id: customerId,
+        month_and_year: { [Op.gt]: deletionMonthYear },
+      },
+    }
+  );
+
+  const currentRecord = await CustomersBillingRecords.findOne({
+    where: { customer_id: customerId, month_and_year: deletionMonthYear },
+  });
+  if (currentRecord && currentRecord.consultation_days) {
+    const deletionDay = parseInt(format(deletionDate, "dd"), 10);
+    const daysArray = currentRecord.consultation_days
+      .split(",")
+      .map((day) => day.trim())
+      .filter((day) => parseInt(day, 10) <= deletionDay);
+
+    await currentRecord.update({
+      consultation_days: daysArray.join(", "),
+      num_consultations: daysArray.length,
+    });
+  }
+
+  await updateConsultationDays(customerId);
+
+  return res.status(200).json({ message: "Cliente deletado com sucesso." });
 };
 
 exports.archiveCustomer = async (req, res) => {
@@ -395,12 +468,62 @@ exports.archiveCustomer = async (req, res) => {
     return res.status(404).json({ error: "Cliente não encontrado." });
   }
 
-  await Customer.update(
+  const archiveDate = new Date();
+
+  const [archive] = await Customer.update(
     { archived: archived },
     { where: { customer_id: customerId, user_id: userId } }
   );
 
-  res.status(200).json({ message: "Cliente arquivado com sucesso." });
+  if (!archive) {
+    res.status(200).json({ message: "Cliente arquivado com sucesso." });
+  }
+
+  const events = await Event.findAll({
+    where: { customer_id: customerId, status: { [Op.notIn]: ["cancelado"] } },
+    attributes: ["date", "google_event_id"],
+  });
+
+  for (const event of events) {
+    const eventDate = parseISO(event.date);
+    if (dateFnsIsAfter(eventDate, archiveDate)) {
+      if (event.google_event_id) {
+        await cancelEventByGoogleId(event.google_event_id);
+      }
+    }
+  }
+
+  const archivedMonthYear = format(archiveDate, "yyyy-MM");
+
+  await CustomersBillingRecords.update(
+    { archived: true },
+    {
+      where: {
+        customer_id: customerId,
+        month_and_year: { [Op.gt]: archivedMonthYear },
+      },
+    }
+  );
+
+  const currentRecord = await CustomersBillingRecords.findOne({
+    where: { customer_id: customerId, month_and_year: archivedMonthYear },
+  });
+  if (currentRecord && currentRecord.consultation_days) {
+    const archiveDay = parseInt(format(archiveDate, "dd"), 10);
+    const daysArray = currentRecord.consultation_days
+      .split(",")
+      .map((day) => day.trim())
+      .filter((day) => parseInt(day, 10) <= archiveDay);
+
+    await currentRecord.update({
+      consultation_days: daysArray.join(", "),
+      num_consultations: daysArray.length,
+    });
+  }
+
+  await updateConsultationDays(customerId);
+
+  return res.status(200).json({ message: "Cliente deletado com sucesso." });
 };
 
 exports.getArchivedCustomers = async (req, res) => {
@@ -421,16 +544,30 @@ exports.linkCustomerToEvent = async (req, res) => {
   const userId = req.user.user_id;
 
   const event = await Event.findOne({
-    where: { customers_id: eventId, user_id: userId },
+    where: { google_event_id: eventId, user_id: userId },
   });
 
   if (!event) {
     return res.status(404).json({ error: "Evento não encontrado." });
   }
 
-  event.customer_id = customer_id;
-  await event.save();
+  await Event.update(
+    { customer_id },
+    {
+      where: {
+        event_name: event.event_name,
+        user_id: userId,
+        customer_id: null,
+      },
+    }
+  );
+  const patient = await Customer.findOne({
+    where: { customer_id, user_id: userId },
+  });
 
+  if (patient) {
+    await updateConsultationDays(patient.customer_id);
+  }
   res
     .status(200)
     .json({ message: "Paciente vinculado com sucesso ao evento!" });

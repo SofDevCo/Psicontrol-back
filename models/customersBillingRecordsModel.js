@@ -30,7 +30,7 @@ const CustomersBillingRecords = sequelize.define(
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
     },
-    consultation_days:{
+    consultation_days: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
@@ -65,7 +65,15 @@ const CustomersBillingRecords = sequelize.define(
     bill_of_sale: {
       type: DataTypes.BOOLEAN,
       allowNull: true,
-    }
+    },
+    fee_updated_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    deleted: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+    },
   },
   {
     tableName: "customers_billing_records",

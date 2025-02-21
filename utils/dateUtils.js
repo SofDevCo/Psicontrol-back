@@ -51,17 +51,16 @@ exports.formatDateIso = (date) => {
 };
 
 exports.calculateAge = (dateOfBirth) => {
-  if(!dateOfBirth){
+  if (!dateOfBirth) {
     return null;
   }
 
   const dob = new Date(dateOfBirth);
-  
+
   if (isNaN(dob)) {
     return null;
   }
 
- 
   const today = new Date();
   let age = today.getFullYear() - dob.getFullYear();
 
@@ -74,4 +73,10 @@ exports.calculateAge = (dateOfBirth) => {
   }
 
   return age;
+};
+
+exports.formatDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
 };
