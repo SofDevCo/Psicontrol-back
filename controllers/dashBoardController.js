@@ -1,4 +1,9 @@
-const { Customer, CustomersBillingRecords, income } = require("../models");
+const {
+  Customer,
+  CustomersBillingRecords,
+  income,
+  Event,
+} = require("../models");
 const { Op } = require("sequelize");
 
 exports.getBillingRecordsByMonthAndYear = async (req, res) => {
@@ -30,20 +35,49 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
     ],
   });
 
-  const totalConsultations = billingRecords.reduce((acc, record) => {
-    const daysArray = record.consultation_days
-      ? record.consultation_days.split(",").map((day) => day.trim())
-      : [];
-    return acc + daysArray.length;
-  }, 0);
+  const customerIds = billingRecords.map((record) => record.customer_id);
 
-  const totalRevenue = billingRecords.reduce((acc, record) => {
-    const daysArray = record.consultation_days
-      ? record.consultation_days.split(",").map((day) => day.trim())
+  const activeEvents = await Event.findAll({
+    where: {
+      customer_id: { [Op.in]: customerIds },
+      status: { [Op.not]: "cancelado" },
+    },
+    attributes: ["customer_id", "date"],
+  });
+
+  const activeDaysByCustomer = activeEvents.reduce((acc, event) => {
+    const day = event.date.split("-")[2];
+    if (!acc[event.customer_id]) acc[event.customer_id] = new Set();
+    acc[event.customer_id].add(day);
+    return acc;
+  }, {});
+
+  const filteredBillingRecords = billingRecords.map((record) => {
+    const activeDays = activeDaysByCustomer[record.customer_id] || new Set();
+    const filteredDays = record.consultation_days
+      ? record.consultation_days
+          .split(",")
+          .map((day) => day.trim())
+          .filter((day) => activeDays.has(day))
       : [];
-    const numConsultations = daysArray.length;
-    return acc + (record.consultation_fee || 0) * numConsultations;
-  }, 0);
+
+    return {
+      ...record.toJSON(),
+      consultation_days: filteredDays.join(", "),
+      num_consultations: filteredDays.length,
+    };
+  });
+
+  const totalConsultations = filteredBillingRecords.reduce(
+    (acc, record) => acc + record.num_consultations,
+    0
+  );
+
+  const totalRevenue = filteredBillingRecords.reduce(
+    (acc, record) =>
+      acc + parseFloat(record.consultation_fee || 0) * record.num_consultations,
+    0
+  );
 
   const monthYear = `${month}/${year.slice(-2)}`;
   const revenues = await income.findAll({
@@ -70,20 +104,20 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
     (acc, expense) => acc + parseFloat(expense.value || 0),
     0
   );
+
   const netRevenue =
     totalRevenue + totalRevenueFromIncome - totalExpenseFromIncome;
-  const netTime = (netRevenue / totalConsultations).toFixed(2);
+  const netTime =
+    totalConsultations > 0
+      ? (netRevenue / totalConsultations).toFixed(2)
+      : "0.00";
 
-  const formattedRecords = billingRecords.map((record) => {
-    const daysArray = record.consultation_days
-      ? record.consultation_days.split(",").map((day) => day.trim())
-      : [];
-    const numConsultations = daysArray.length;
-
+  const formattedRecords = filteredBillingRecords.map((record) => {
     const consultationFee = parseFloat(record.consultation_fee || 0);
-    const totalConsultationFee = numConsultations * consultationFee;
+    const totalConsultationFee = record.num_consultations * consultationFee;
+
     return {
-      ...record.toJSON(),
+      ...record,
       total_consultation_fee:
         totalConsultationFee > 0 ? totalConsultationFee.toFixed(2) : "0.00",
     };

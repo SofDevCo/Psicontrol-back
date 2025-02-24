@@ -1,6 +1,7 @@
 const { Customer, Event, Calendar } = require("../models");
+const { Op } = require("sequelize");
 
-exports.getUnmatchedPatients = async (req, res, next) => {
+exports.getUnmatchedPatients = async (req, res) => {
   const enabledCalendars = await Calendar.findAll({
     where: {
       user_id: req.user.user_id,
@@ -22,15 +23,10 @@ exports.getUnmatchedPatients = async (req, res, next) => {
     where: {
       user_id: req.user.user_id,
       customer_id: null,
-      calendar_id: calendarIds,
+      calendar_id: { [Op.in]: calendarIds },
+      status: { [Op.not]: "cancelado" },
     },
-    attributes: [
-      "customers_id",
-      "event_name",
-      "date",
-      "google_event_id",
-      "calendar_id",
-    ],
+    attributes: ["event_name", "date", "google_event_id", "calendar_id"],
   });
 
   const grouped = unmatchedEvents.reduce((acc, event) => {
@@ -43,7 +39,6 @@ exports.getUnmatchedPatients = async (req, res, next) => {
     }
     acc[key].events.push({
       google_event_id: event.google_event_id,
-      customers_id: event.customers_id,
       date: event.date,
       calendar_id: event.calendar_id,
     });
