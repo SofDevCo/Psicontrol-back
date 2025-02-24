@@ -255,11 +255,9 @@ exports.addConsultationDay = async (req, res) => {
   });
 
   if (!latestEvent) {
-    return res
-      .status(400)
-      .json({
-        error: "Não foi possível encontrar o calendarId para esse paciente.",
-      });
+    return res.status(400).json({
+      error: "Não foi possível encontrar o calendarId para esse paciente.",
+    });
   }
 
   const calendarId = latestEvent.calendar_id;
@@ -325,11 +323,12 @@ exports.addConsultationDay = async (req, res) => {
 };
 
 exports.removeConsultationDay = async (req, res) => {
-  const { customerId, day } = req.body;
-  if (!customerId || !day) {
-    return res
-      .status(400)
-      .json({ error: "Os campos 'customerId' e 'day' são obrigatórios." });
+  const { customerId, days } = req.body;
+
+  if (!customerId || !days || !Array.isArray(days)) {
+    return res.status(400).json({
+      error: "Os campos 'customerId' e 'days' (array) são obrigatórios.",
+    });
   }
 
   const today = new Date();
@@ -351,11 +350,15 @@ exports.removeConsultationDay = async (req, res) => {
     ? billingRecord.consultation_days.split(",").map((d) => d.trim())
     : [];
 
-  if (!consultationDays.includes(day)) {
-    return res.status(400).json({ error: "Este dia não está registrado." });
+  const daysToRemove = days.filter((day) => consultationDays.includes(day));
+
+  if (daysToRemove.length === 0) {
+    return res
+      .status(400)
+      .json({ error: "Nenhum dos dias fornecidos está registrado." });
   }
 
-  consultationDays = consultationDays.filter((d) => d !== day);
+  consultationDays = consultationDays.filter((d) => !daysToRemove.includes(d));
 
   await billingRecord.update({
     consultation_days:
@@ -363,22 +366,22 @@ exports.removeConsultationDay = async (req, res) => {
     num_consultations: consultationDays.length,
   });
 
-  const event = await Event.findOne({
-    where: {
-      customer_id: customerId,
-      date: `${monthYear}-${day.padStart(2, "0")}`,
-      status: { [Op.not]: "cancelado" },
-    },
-  });
-
-  if (event) {
-    await Event.update(
-      { status: "cancelado" },
-      { where: { google_event_id: event.google_event_id } }
-    );
-  }
+  await Event.update(
+    { status: "cancelado" },
+    {
+      where: {
+        customer_id: customerId,
+        date: {
+          [Op.in]: daysToRemove.map(
+            (day) => `${monthYear}-${day.padStart(2, "0")}`
+          ),
+        },
+        status: { [Op.not]: "cancelado" },
+      },
+    }
+  );
 
   res
     .status(200)
-    .json({ message: "Dia removido e evento cancelado com sucesso." });
+    .json({ message: "Dias removidos e eventos cancelados com sucesso." });
 };
