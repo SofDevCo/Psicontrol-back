@@ -24,15 +24,14 @@ const updateConsultationDays = async (customerId) => {
     return acc;
   }, {});
 
+  const patient = await Customer.findOne({
+    where: { customer_id: customerId },
+  });
+  const consultationFee = patient
+    ? parseFloat(patient.consultation_fee) || 0.0
+    : 0.0;
+
   for (const [monthYear, days] of Object.entries(daysByMonthYear)) {
-    const applicableFeeRecord = billingRecords.find(
-      (record) => record.month_and_year <= monthYear
-    );
-
-    const consultationFee = applicableFeeRecord?.consultation_fee || 0.0;
-
-    const numConsultations = days.length;
-
     const existingRecord = await CustomersBillingRecords.findOne({
       where: { customer_id: customerId, month_and_year: monthYear },
     });
@@ -44,15 +43,16 @@ const updateConsultationDays = async (customerId) => {
     if (existingRecord) {
       await existingRecord.update({
         consultation_days: days.join(", "),
-        num_consultations: numConsultations,
+        num_consultations: days.length,
         deleted: existingRecord.deleted,
+        consultation_fee: existingRecord.consultation_fee || consultationFee,
       });
     } else {
       await CustomersBillingRecords.create({
         customer_id: customerId,
         month_and_year: monthYear,
         consultation_days: days.join(", "),
-        num_consultations: numConsultations,
+        num_consultations: days.length,
         consultation_fee: consultationFee,
         fee_updated_at: new Date(),
       });
