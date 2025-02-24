@@ -80,9 +80,20 @@ exports.sendWhatsAppMessage = async (req, res) => {
   const template = Handlebars.compile(messageTemplate);
   const renderedMessage = template(dynamicData);
 
-  const formattedPhoneNumber = customer.customer_phone.replace(/\D/g, "");
+  if (!customer.customer_phone && !customer.customer_email) {
+    return res
+      .status(400)
+      .json({ error: "O cliente não possui telefone ou e-mail cadastrado." });
+  }
+
+  const formattedPhoneNumber = customer.customer_phone
+    ? customer.customer_phone.replace(/\D/g, "")
+    : null;
+
   const encodedMessage = encodeURIComponent(renderedMessage);
-  const whatsappLink = `https://wa.me/${formattedPhoneNumber}?text=${encodedMessage}`;
+  const whatsappLink = formattedPhoneNumber
+    ? `https://wa.me/${formattedPhoneNumber}?text=${encodedMessage}`
+    : null;
 
   await CustomersBillingRecords.update(
     { sending_invoice: true },
@@ -93,6 +104,9 @@ exports.sendWhatsAppMessage = async (req, res) => {
     success: true,
     user_message: renderedMessage,
     whatsappLink,
+    mailtoLink: customer.customer_email
+      ? `mailto:${customer.customer_email}?subject=Informações&body=${encodedMessage}`
+      : null,
   });
 };
 
