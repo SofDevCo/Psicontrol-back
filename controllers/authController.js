@@ -71,7 +71,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
     const patients = await Customer.findAll();
 
     const fuse = new Fuse(patients, {
-      keys: ["customer_name"],
+      keys: ["customer_calendar_name"],
       threshold: 0.3,
     });
 
