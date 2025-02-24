@@ -37,21 +37,25 @@ exports.upsertCustomer = async (userId, customerData) => {
   } = customerData;
 
   if (!customer_name) {
-    return res.status(400).json({ error: "customer_name" });
+    return { error: true, status: 400, message: "customer_name" };
   }
 
   if (customer_cpf_cnpj && !validateCPFOrCNPJ(customer_cpf_cnpj)) {
-    return res.status(400).json({ error: "CPF/CNPJ inválido" });
+    return { error: true, status: 400, message: "CPF/CNPJ inválido" };
   }
 
   if (alternative_cpf_cnpj && !validateCPFOrCNPJ(alternative_cpf_cnpj)) {
-    return res.status(400).json({ error: "CPF/CNPJ alternativo inválido" });
+    return {
+      error: true,
+      status: 400,
+      message: "CPF/CNPJ alternativo inválido",
+    };
   }
 
   if (customer_email) {
     const emailValidation = validateEmail(customer_email);
     if (!emailValidation.isValid) {
-      return res.status(400).json({ error: emailValidation.message });
+      return { error: true, status: 400, message: emailValidation.message };
     }
   }
 
@@ -59,7 +63,7 @@ exports.upsertCustomer = async (userId, customerData) => {
     ? (() => {
         const validation = validatePhoneNumber(customer_phone);
         if (!validation.isValid) {
-          return { status: 400, message: validation.message };
+          return { error: true, status: 400, message: validation.message };
         }
         return validation.formatted;
       })()
@@ -69,7 +73,7 @@ exports.upsertCustomer = async (userId, customerData) => {
     ? (() => {
         const validation = validatePhoneNumber(customer_emergency_contact);
         if (!validation.isValid) {
-          return { status: 400, message: validation.message };
+          return { error: true, status: 400, message: validation.message };
         }
         return validation.formatted;
       })()
@@ -87,7 +91,11 @@ exports.upsertCustomer = async (userId, customerData) => {
     : null;
 
   if (customer_dob && !formattedCustomerDob) {
-    return res.status(400).json({ error: "Data de nascimento inválida." });
+    return {
+      error: true,
+      status: 400,
+      message: "Data de nascimento inválida.",
+    };
   }
 
   if (customer_id) {
@@ -95,7 +103,7 @@ exports.upsertCustomer = async (userId, customerData) => {
       where: { customer_id, user_id: userId },
     });
     if (!customer) {
-      return res.status(401).json({ error: "Usuário não autenticado." });
+      return { error: true, status: 401, message: "Usuário não autenticado." };
     }
 
     await customer.update({
@@ -147,7 +155,7 @@ exports.upsertCustomer = async (userId, customerData) => {
     }
 
     const age = calculateAge(formattedCustomerDob);
-    return { customer, age };
+    return { customer: customer.toJSON(), age };
   } else {
     const newCustomer = await Customer.create({
       user_id: userId,
@@ -170,13 +178,18 @@ exports.upsertCustomer = async (userId, customerData) => {
     });
 
     const age = calculateAge(formattedCustomerDob);
-    return { newCustomer, age };
+    return { newCustomer: newCustomer.toJSON(), age };
   }
 };
 
 exports.createCustomer = async (req, res) => {
   const user = req.user;
   const newCustomer = await this.upsertCustomer(user.user_id, req.body);
+
+  if (newCustomer.error) {
+    return res.status(newCustomer.status).json({ error: newCustomer.message });
+  }
+
   res.status(201).json(newCustomer);
 };
 
@@ -186,6 +199,13 @@ exports.editCustomer = async (req, res) => {
     customer_id: req.params.customerId,
     ...req.body,
   });
+
+  if (updateCustomer.error) {
+    return res
+      .status(updateCustomer.status)
+      .json({ error: updateCustomer.message });
+  }
+
   res.status(200).json(updateCustomer);
 };
 
