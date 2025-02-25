@@ -60,24 +60,28 @@ exports.upsertCustomer = async (userId, customerData) => {
   }
 
   const formattedCustomerPhone = customer_phone
-    ? (() => {
-        const validation = validatePhoneNumber(customer_phone);
-        if (!validation.isValid) {
-          return { error: true, status: 400, message: validation.message };
-        }
-        return validation.formatted;
-      })()
+    ? validatePhoneNumber(customer_phone, "BR", "53")
     : null;
 
+  if (formattedCustomerPhone === null && customer_phone) {
+    return {
+      error: true,
+      status: 400,
+      message: "Número de telefone inválido.",
+    };
+  }
+
   const formattedEmergencyContact = customer_emergency_contact
-    ? (() => {
-        const validation = validatePhoneNumber(customer_emergency_contact);
-        if (!validation.isValid) {
-          return { error: true, status: 400, message: validation.message };
-        }
-        return validation.formatted;
-      })()
+    ? validatePhoneNumber(customer_emergency_contact, "BR", "53")
     : null;
+
+  if (formattedEmergencyContact === null && customer_emergency_contact) {
+    return {
+      error: true,
+      status: 400,
+      message: "Número de telefone de emergência inválido.",
+    };
+  }
 
   const validPatientStatus =
     patient_status === "true"

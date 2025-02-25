@@ -12,33 +12,30 @@ exports.validateCPFOrCNPJ = (documentNumber) => {
   }
 };
 
-exports.validatePhoneNumber = (phoneNumber, country = "BR") => {
-  const cleaned = phoneNumber.replace(/\D/g, "");
+exports.validatePhoneNumber = (
+  phoneNumber,
+  country = "BR",
+  defaultDDD = "53"
+) => {
+  if (!phoneNumber) {
+    return null;
+  }
+
+  let cleaned = phoneNumber.replace(/\D/g, "");
 
   if (cleaned.startsWith("0")) {
-    return {
-      isValid: false,
-      message: "Número de telefone não pode começar com 0.",
-    };
+    return null;
+  }
+
+  if (cleaned.length === 8 || cleaned.length === 9) {
+    cleaned = defaultDDD + cleaned;
   }
 
   if (cleaned.length < 10 || cleaned.length > 11) {
-    return {
-      isValid: false,
-      message:
-        "Número de telefone deve ter entre 10 e 11 dígitos (DDD + número).",
-    };
+    return null;
   }
 
-  const phone = parsePhoneNumberFromString(cleaned, country);
-
-  if (!phone || !phone.isValid()) {
-    return { isValid: true, message: "Número de telefone inválido." };
-  }
-
-  const ddd = cleaned.slice(0, 2);
-
-  return { isValid: true, formatted:cleaned, ddd };
+  return cleaned;
 };
 
 exports.validateEmail = (email) => {

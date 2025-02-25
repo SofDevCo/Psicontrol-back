@@ -37,9 +37,9 @@ exports.sendWhatsAppMessage = async (req, res) => {
   });
 
   if (!billingRecords || billingRecords.length === 0) {
-    return res.status(404).json({
-      error: "Nenhum registro encontrado para o mês selecionado.",
-    });
+    return res
+      .status(404)
+      .json({ error: "Nenhum registro encontrado para o mês selecionado." });
   }
 
   const consultationFee = parseFloat(customer.consultation_fee || 0);
@@ -57,7 +57,6 @@ exports.sendWhatsAppMessage = async (req, res) => {
   const totalConsultationFee = (totalConsultations * consultationFee).toFixed(
     2
   );
-
   const formattedDays =
     consultationDays.length === 1
       ? consultationDays[0]
@@ -86,27 +85,35 @@ exports.sendWhatsAppMessage = async (req, res) => {
       .json({ error: "O cliente não possui telefone ou e-mail cadastrado." });
   }
 
-  const formattedPhoneNumber = customer.customer_phone
-    ? customer.customer_phone.replace(/\D/g, "")
-    : null;
+  let formattedPhoneNumber = customer.customer_phone?.replace(/\D/g, "");
 
+  if (
+    !formattedPhoneNumber ||
+    formattedPhoneNumber.length < 10 ||
+    formattedPhoneNumber.length > 11
+  ) {
+    return res.status(400).json({ error: "Número de telefone inválido." });
+  }
+
+  formattedPhoneNumber = `55${formattedPhoneNumber}`;
   const encodedMessage = encodeURIComponent(renderedMessage);
-  const whatsappLink = formattedPhoneNumber
-    ? `https://wa.me/${formattedPhoneNumber}?text=${encodedMessage}`
-    : null;
+  const whatsappLink = `https://wa.me/${formattedPhoneNumber}?text=${encodedMessage}`;
+
+  console.log("Link do WhatsApp gerado:", whatsappLink);
+
+  if (!whatsappLink) {
+    return res.status(400).json({ error: "Erro ao gerar o link do WhatsApp." });
+  }
 
   await CustomersBillingRecords.update(
     { sending_invoice: true },
     { where: { customer_id, month_and_year: selected_month } }
   );
 
-  res.status(200).json({
+  return res.status(200).json({
     success: true,
     user_message: renderedMessage,
     whatsappLink,
-    mailtoLink: customer.customer_email
-      ? `mailto:${customer.customer_email}?subject=Informações&body=${encodedMessage}`
-      : null,
   });
 };
 
