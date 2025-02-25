@@ -1,4 +1,5 @@
 const { Customer, Event, CustomersBillingRecords } = require("../models");
+const Fuse = require("fuse.js");
 const {
   updateConsultationDays,
   updateConsultationFee,
@@ -16,6 +17,10 @@ const {
 const { parseISO, isAfter: dateFnsIsAfter, format } = require("date-fns");
 const { Op } = require("sequelize");
 const { cancelEventByGoogleId } = require("../services/eventService");
+const {
+  fetchGoogleCalendarEvents,
+  fetchGoogleCalendars,
+} = require("./authController");
 
 exports.upsertCustomer = async (userId, customerData) => {
   const {
@@ -192,6 +197,38 @@ exports.createCustomer = async (req, res) => {
 
   if (newCustomer.error) {
     return res.status(newCustomer.status).json({ error: newCustomer.message });
+  }
+
+  const { newCustomer: createdCustomer } = newCustomer;
+  const accessToken = user.access_token;
+
+  const calendars = await fetchGoogleCalendars(accessToken);
+  if (calendars.length === 0) {
+    return res.status(400).json({ error: "Nenhum calendário encontrado." });
+  }
+
+  const calendarId = calendars[0].id;
+
+  const events = await fetchGoogleCalendarEvents(accessToken, calendarId);
+  const unmatchedEvents = await Event.findAll({ where: { customer_id: null } });
+
+  const fuse = new Fuse(unmatchedEvents, {
+    keys: ["event_name"],
+    threshold: 0.2,
+  });
+
+  const results = fuse.search(createdCustomer.customer_calendar_name);
+  const matchedEvents = results.map((r) => r.item);
+
+  if (matchedEvents.length > 0) {
+    await Event.update(
+      { customer_id: createdCustomer.customer_id },
+      {
+        where: { google_event_id: matchedEvents.map((e) => e.google_event_id) },
+      }
+    );
+
+    await updateConsultationDays(createdCustomer.customer_id);
   }
 
   res.status(201).json(newCustomer);
