@@ -86,12 +86,16 @@ const updateConsultationFee = async (customerId, newFee, updateFrom) => {
       return {
         error: true,
         message: "Paciente não possui registro no mês atual.",
+        status: 400,
       };
     }
+
     await existingRecord.update({
       consultation_fee: newFee,
       fee_updated_at: new Date(),
     });
+
+    return { success: true };
   }
 
   let futureRecordsCondition = {

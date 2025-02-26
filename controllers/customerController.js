@@ -132,11 +132,15 @@ exports.upsertCustomer = async (userId, customerData) => {
       customer_dob: formattedCustomerDob,
     });
 
-    await updateConsultationFee(
+    const updateResult = await updateConsultationFee(
       customer.customer_id,
       parseFloat(consultation_fee) || 0.0,
       customerData.update_from
     );
+
+    if (updateResult.error) {
+      return updateResult;
+    }
 
     if (
       customerData.update_from === "current_month" ||
