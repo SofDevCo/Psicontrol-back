@@ -154,12 +154,6 @@ exports.upsertCustomer = async (userId, customerData) => {
         await billingRecord.update({
           consultation_fee: parseFloat(consultation_fee) || 0.0,
         });
-      } else {
-        await CustomersBillingRecords.create({
-          customer_id: customer.customer_id,
-          month_and_year: currentMonthYear,
-          consultation_fee: parseFloat(consultation_fee) || 0.0,
-        });
       }
     }
 

@@ -69,7 +69,7 @@ const updateConsultationFee = async (customerId, newFee, updateFrom) => {
     return `${year}-${month}`;
   };
 
-  const currentMonthYear = formatDate(new Date());
+  const currentMonthYear = formatDate(now);
   const nextMonthYear = formatDate(
     new Date(now.getFullYear(), now.getMonth() + 1, 1)
   );
@@ -82,12 +82,16 @@ const updateConsultationFee = async (customerId, newFee, updateFrom) => {
       },
     });
 
-    if (existingRecord) {
-      await existingRecord.update({
-        consultation_fee: newFee,
-        fee_updated_at: new Date(),
-      });
+    if (!existingRecord) {
+      return {
+        error: true,
+        message: "Paciente não possui registro no mês atual.",
+      };
     }
+    await existingRecord.update({
+      consultation_fee: newFee,
+      fee_updated_at: new Date(),
+    });
   }
 
   let futureRecordsCondition = {
@@ -114,6 +118,8 @@ const updateConsultationFee = async (customerId, newFee, updateFrom) => {
       }
     );
   }
+
+  return { success: true };
 };
 
 const recalculateAllConsultationDays = async () => {
