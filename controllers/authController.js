@@ -94,6 +94,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
 
       const fuse = new Fuse(patients, {
         keys: ["customer_calendar_name"],
+        threshold: 0.2,
       });
 
       const result = fuse.search(summary);
