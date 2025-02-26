@@ -115,6 +115,9 @@ exports.upsertCustomer = async (userId, customerData) => {
       return { error: true, status: 401, message: "Usuário não autenticado." };
     }
 
+    const previousConsultationFee = customer.consultation_fee;
+    const newConsultationFee = parseFloat(consultation_fee) || 0.0;
+
     await customer.update({
       customer_name,
       customer_second_name,
@@ -132,14 +135,16 @@ exports.upsertCustomer = async (userId, customerData) => {
       customer_dob: formattedCustomerDob,
     });
 
-    const updateResult = await updateConsultationFee(
-      customer.customer_id,
-      parseFloat(consultation_fee) || 0.0,
-      customerData.update_from
-    );
+    if (previousConsultationFee !== newConsultationFee) {
+      const updateResult = await updateConsultationFee(
+        customer.customer_id,
+        newConsultationFee,
+        customerData.update_from
+      );
 
-    if (updateResult.error) {
-      return updateResult;
+      if (updateResult.error) {
+        return updateResult;
+      }
     }
 
     if (
