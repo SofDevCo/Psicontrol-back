@@ -236,12 +236,13 @@ exports.saveSelectedCalendars = async (req, res) => {
 };
 
 exports.addConsultationDay = async (req, res) => {
-  const { customerId, day } = req.body;
+  const { customerId, day, month, year } = req.body;
 
-  if (!customerId || !day) {
-    return res
-      .status(400)
-      .json({ error: "Os campos 'customerId' e 'day' são obrigatórios." });
+  if (!customerId || !day || !month || !year) {
+    return res.status(400).json({
+      error:
+        "Os campos 'customerId', 'day', 'month' e 'year' são obrigatórios.",
+    });
   }
 
   const customer = await Customer.findByPk(customerId);
@@ -261,11 +262,7 @@ exports.addConsultationDay = async (req, res) => {
   }
 
   const calendarId = latestEvent.calendar_id;
-
-  const today = new Date();
-  const monthYear = `${today.getFullYear()}-${String(
-    today.getMonth() + 1
-  ).padStart(2, "0")}`;
+  const monthYear = `${year}-${String(month).padStart(2, "0")}`;
 
   let billingRecord = await CustomersBillingRecords.findOne({
     where: { customer_id: customerId, month_and_year: monthYear },
@@ -323,18 +320,16 @@ exports.addConsultationDay = async (req, res) => {
 };
 
 exports.removeConsultationDay = async (req, res) => {
-  const { customerId, days } = req.body;
+  const { customerId, days, month, year } = req.body;
 
-  if (!customerId || !days || !Array.isArray(days)) {
+  if (!customerId || !days || !Array.isArray(days) || !month || !year) {
     return res.status(400).json({
-      error: "Os campos 'customerId' e 'days' (array) são obrigatórios.",
+      error:
+        "Os campos 'customerId', 'days' (array), 'month' e 'year' são obrigatórios.",
     });
   }
 
-  const today = new Date();
-  const monthYear = `${today.getFullYear()}-${String(
-    today.getMonth() + 1
-  ).padStart(2, "0")}`;
+  const monthYear = `${year}-${String(month).padStart(2, "0")}`;
 
   const billingRecord = await CustomersBillingRecords.findOne({
     where: { customer_id: customerId, month_and_year: monthYear },

@@ -37,9 +37,9 @@ exports.sendWhatsAppMessage = async (req, res) => {
   });
 
   if (!billingRecords || billingRecords.length === 0) {
-    return res.status(404).json({
-      error: "Nenhum registro encontrado para o mês selecionado.",
-    });
+    return res
+      .status(404)
+      .json({ error: "Nenhum registro encontrado para o mês selecionado." });
   }
 
   const consultationFee = parseFloat(customer.consultation_fee || 0);
@@ -57,14 +57,12 @@ exports.sendWhatsAppMessage = async (req, res) => {
   const totalConsultationFee = (totalConsultations * consultationFee).toFixed(
     2
   );
-
   const formattedDays =
     consultationDays.length === 1
       ? consultationDays[0]
       : `${consultationDays.slice(0, -1).join(", ")} e ${consultationDays.slice(
           -1
         )}`;
-
   const [year, month] = selected_month.split("-");
   const date = new Date(year, Number(month) - 1, 1);
 
@@ -76,37 +74,45 @@ exports.sendWhatsAppMessage = async (req, res) => {
     clinic_name: user.clinic_name || "Consultório",
   };
 
-  const messageTemplate = user.user_message;
-  const template = Handlebars.compile(messageTemplate);
+  const template = Handlebars.compile(user.user_message);
   const renderedMessage = template(dynamicData);
 
-  if (!customer.customer_phone && !customer.customer_email) {
-    return res
-      .status(400)
-      .json({ error: "O cliente não possui telefone ou e-mail cadastrado." });
+  const hasPhone = customer.customer_phone;
+  const hasEmail = customer.customer_email;
+
+  if (!hasPhone && !hasEmail) {
+    return res.status(200).json({
+      success: false,
+      message: renderedMessage,
+      showModal: false,
+    });
   }
 
-  const formattedPhoneNumber = customer.customer_phone
-    ? customer.customer_phone.replace(/\D/g, "")
-    : null;
+  if (!hasPhone) {
+    return res.status(200).json({
+      success: false,
+      message: renderedMessage,
+      showModal: true,
+      whatsappLink: null,
+    });
+  }
 
+  const formattedPhoneNumber = `55${customer.customer_phone.replace(
+    /\D/g,
+    ""
+  )}`;
   const encodedMessage = encodeURIComponent(renderedMessage);
-  const whatsappLink = formattedPhoneNumber
-    ? `https://wa.me/${formattedPhoneNumber}?text=${encodedMessage}`
-    : null;
+  const whatsappLink = `https://wa.me/${formattedPhoneNumber}?text=${encodedMessage}`;
 
   await CustomersBillingRecords.update(
     { sending_invoice: true },
     { where: { customer_id, month_and_year: selected_month } }
   );
 
-  res.status(200).json({
+  return res.status(200).json({
     success: true,
     user_message: renderedMessage,
     whatsappLink,
-    mailtoLink: customer.customer_email
-      ? `mailto:${customer.customer_email}?subject=Informações&body=${encodedMessage}`
-      : null,
   });
 };
 
@@ -146,9 +152,9 @@ exports.sendEmailMessage = async (req, res) => {
   });
 
   if (!billingRecords || billingRecords.length === 0) {
-    return res.status(404).json({
-      error: "Nenhum registro encontrado para o mês selecionado.",
-    });
+    return res
+      .status(404)
+      .json({ error: "Nenhum registro encontrado para o mês selecionado." });
   }
 
   const consultationFee = parseFloat(customer.consultation_fee || 0);
@@ -166,14 +172,12 @@ exports.sendEmailMessage = async (req, res) => {
   const totalConsultationFee = (totalConsultations * consultationFee).toFixed(
     2
   );
-
   const formattedDays =
     consultationDays.length === 1
       ? consultationDays[0]
       : `${consultationDays.slice(0, -1).join(", ")} e ${consultationDays.slice(
           -1
         )}`;
-
   const [year, month] = selected_month.split("-");
   const date = new Date(year, Number(month) - 1, 1);
 
@@ -185,11 +189,18 @@ exports.sendEmailMessage = async (req, res) => {
     clinic_name: user.clinic_name || "Consultório",
   };
 
-  const messageTemplate = user.user_message;
-  const template = Handlebars.compile(messageTemplate);
+  const template = Handlebars.compile(user.user_message);
   const renderedMessage = template(dynamicData);
 
   const customerEmail = customer.customer_email;
+  if (!customerEmail) {
+    return res.status(200).json({
+      success: false,
+      message: "E-mail não cadastrado.",
+      showModal: true,
+    });
+  }
+
   const encodedMessage = encodeURIComponent(renderedMessage);
   const mailtoLink = `mailto:${customerEmail}?subject=Informações&body=${encodedMessage}`;
 
@@ -199,6 +210,7 @@ exports.sendEmailMessage = async (req, res) => {
   );
 
   res.status(200).json({
+    success: true,
     user_message: renderedMessage,
     mailtoLink,
   });

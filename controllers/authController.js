@@ -68,15 +68,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
     }
 
     const events = await fetchGoogleCalendarEvents(accessToken, calendarId);
-    const patients = await Customer.findAll();
-
-    const fuse = new Fuse(patients, {
-      keys: ["customer_name"],
-      threshold: 0.3,
-    });
-
     const unmatchedEvents = [];
-
     const processedEvents = new Set();
 
     for (const event of events) {
@@ -98,11 +90,16 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
         console.warn("Evento sem summary:", event);
       }
 
-      const cleanedSummary = summary.replace(/^Paciente\s*-\s*/, "");
+      let patients = await Customer.findAll();
 
-      const result = fuse.search(cleanedSummary);
+      const fuse = new Fuse(patients, {
+        keys: ["customer_calendar_name"],
+        threshold: 0.2,
+      });
+
+      const result = fuse.search(summary);
       const bestMatch = result.length > 0 ? result[0].item : null;
-      const customerId = bestMatch ? bestMatch.customer_id : null;
+      let customerId = bestMatch ? bestMatch.customer_id : null;
 
       let startDate = null,
         startTime = null,
@@ -130,7 +127,17 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
         endTime = null;
       }
 
-   const existingEvent = await Event.findOne({where: {google_event_id: event.id}})
+      const existingEvent = await Event.findOne({
+        where: { google_event_id: event.id },
+      });
+
+      if (!customerId) {
+        patients = await Customer.findAll();
+        const resultRetry = fuse.search(summary);
+        const bestMatchRetry =
+          resultRetry.length > 0 ? resultRetry[0].item : null;
+        customerId = bestMatchRetry ? bestMatchRetry.customer_id : null;
+      }
 
       if (customerId) {
         if (eventExists) {
@@ -138,7 +145,10 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
             {
               event_name: event.summary,
               date: startDate,
-              status: existingEvent?.status === "cancelado" ? "cancelado" : event.status,
+              status:
+                existingEvent?.status === "cancelado"
+                  ? "cancelado"
+                  : event.status,
               calendar_id: calendarId,
               start_time: startTime,
               end_time: endTime,
@@ -157,7 +167,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
             start_time: startTime,
             end_time: endTime,
             user_id: user.user_id,
-            customer_id: null,
+            customer_id: customerId,
           });
         }
         await updateConsultationDays(customerId);
