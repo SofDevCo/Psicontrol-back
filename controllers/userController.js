@@ -5,6 +5,7 @@ const {
   validateCPFOrCNPJ,
   validatePhoneNumber,
   validateEmail,
+  validateCRP,
 } = require("../utils/Validators");
 
 const storage = multer.diskStorage({
@@ -66,6 +67,12 @@ exports.editUser = [
     }
     if (user_cnpj && !validateCPFOrCNPJ(user_cnpj)) {
       return res.status(400).json({ error: "CNPJ inválido." });
+    }
+
+    if (crp_number && !validateCRP(crp_number)) {
+      return res
+        .status(400)
+        .json({ error: "CRP inválido. O formato correto é XX/XXXXX" });
     }
 
     const formattedPhone = user_phone

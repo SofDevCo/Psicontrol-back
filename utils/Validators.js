@@ -44,3 +44,15 @@ exports.validateEmail = (email) => {
   }
   return { isValid: true, formatted: email.trim().toLowerCase() };
 };
+
+exports.validateCRP = (crpNumber) => {
+  if (!crpNumber) {
+    return false;
+  }
+
+  crpNumber = crpNumber.trim();
+
+  const crpRegex = /^\d{2}\/\d{4,5}$/;
+
+  return crpRegex.test(crpNumber);
+};
