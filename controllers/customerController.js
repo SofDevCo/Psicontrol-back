@@ -213,22 +213,37 @@ exports.createCustomer = async (req, res) => {
   const calendarId = calendars[0].id;
 
   const events = await fetchGoogleCalendarEvents(accessToken, calendarId);
-  const unmatchedEvents = await Event.findAll({ where: { customer_id: null } });
-
-  const fuse = new Fuse(unmatchedEvents, {
-    keys: ["event_name"],
-    threshold: 0.2,
+  const unmatchedEvents = await Event.findAll({
+    where: { customer_id: null, user_id: user.user_id },
   });
 
-  const results = fuse.search(createdCustomer.customer_calendar_name);
-  const matchedEvents = results.map((r) => r.item);
+  const cleanCustomerName = createdCustomer.customer_calendar_name
+    .replace(/^Paciente - /i, "")
+    .trim();
 
-  if (matchedEvents.length > 0) {
+  const cleanUnmatchedEvents = unmatchedEvents.map((event) => ({
+    ...event,
+    event_name: event.event_name.replace(/^Paciente - /i, "").trim(),
+  }));
+
+  const fuse = new Fuse(cleanUnmatchedEvents, {
+    keys: ["event_name"],
+    threshold: 0.05,
+    distance: 100,
+    findAllMatches: true,
+  });
+
+  const result = fuse.search(cleanCustomerName);
+  const matchedEvents = result.map((r) => r.item);
+
+  const eventIds = matchedEvents
+    .map((e) => e.dataValues?.google_event_id)
+    .filter((id) => id);
+
+  if (eventIds.length > 0) {
     await Event.update(
       { customer_id: createdCustomer.customer_id },
-      {
-        where: { google_event_id: matchedEvents.map((e) => e.google_event_id) },
-      }
+      { where: { google_event_id: { [Op.in]: eventIds }, user_id: user.user_id } }
     );
 
     await updateConsultationDays(createdCustomer.customer_id);

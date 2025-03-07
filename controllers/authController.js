@@ -92,13 +92,35 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
 
       let patients = await Customer.findAll();
 
-      const fuse = new Fuse(patients, {
-        keys: ["customer_calendar_name"],
-        threshold: 0.2,
-      });
+      const cleanSummary = summary.replace(/^Paciente - /i, "").trim();
 
-      const result = fuse.search(summary);
-      const bestMatch = result.length > 0 ? result[0].item : null;
+      let bestMatch = patients.find(
+        (p) =>
+          p.customer_calendar_name
+            .replace(/^Paciente - /i, "")
+            .trim()
+            .toLowerCase() === cleanSummary.toLowerCase()
+      );
+
+      if (!bestMatch) {
+        const cleanPatients = patients.map((p) => ({
+          ...p,
+          customer_calendar_name: p.customer_calendar_name
+            .replace(/^Paciente - /i, "")
+            .trim(),
+        }));
+
+        const fuse = new Fuse(cleanPatients, {
+          keys: ["customer_calendar_name"],
+          threshold: 0.05,
+          distance: 100,
+          findAllMatches: true,
+        });
+
+        const result = fuse.search(cleanSummary);
+        bestMatch = result.length > 0 ? result[0].item : null;
+      }
+
       let customerId = bestMatch ? bestMatch.customer_id : null;
 
       let startDate = null,
@@ -130,14 +152,6 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
       const existingEvent = await Event.findOne({
         where: { google_event_id: event.id },
       });
-
-      if (!customerId) {
-        patients = await Customer.findAll();
-        const resultRetry = fuse.search(summary);
-        const bestMatchRetry =
-          resultRetry.length > 0 ? resultRetry[0].item : null;
-        customerId = bestMatchRetry ? bestMatchRetry.customer_id : null;
-      }
 
       if (customerId) {
         if (eventExists) {
