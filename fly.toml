@@ -1,15 +1,15 @@
-# fly.toml app configuration file generated for psicontrolback on 2024-11-19T12:47:33-03:00
+# fly.toml app configuration file generated for psicontrol-back-staging on 2025-03-07T12:47:54Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'psicontrol-back'
-primary_region = 'gig'
+app = 'psicontrol-back-staging'
+primary_region = 'gru'
 
 [build]
 
 [http_service]
-  internal_port = 3000
+  internal_port = 3001
   force_https = true
   auto_stop_machines = 'stop'
   auto_start_machines = true
@@ -20,3 +20,4 @@ primary_region = 'gig'
   memory = '1gb'
   cpu_kind = 'shared'
   cpus = 1
+  memory_mb = 1024
