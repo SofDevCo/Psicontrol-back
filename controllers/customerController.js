@@ -213,7 +213,9 @@ exports.createCustomer = async (req, res) => {
   const calendarId = calendars[0].id;
 
   const events = await fetchGoogleCalendarEvents(accessToken, calendarId);
-  const unmatchedEvents = await Event.findAll({ where: { customer_id: null } });
+  const unmatchedEvents = await Event.findAll({
+    where: { customer_id: null, user_id: user.user_id },
+  });
 
   const cleanCustomerName = createdCustomer.customer_calendar_name
     .replace(/^Paciente - /i, "")
@@ -226,7 +228,7 @@ exports.createCustomer = async (req, res) => {
 
   const fuse = new Fuse(cleanUnmatchedEvents, {
     keys: ["event_name"],
-    threshold: 0.1,
+    threshold: 0.05,
     distance: 100,
     findAllMatches: true,
   });
@@ -241,7 +243,7 @@ exports.createCustomer = async (req, res) => {
   if (eventIds.length > 0) {
     await Event.update(
       { customer_id: createdCustomer.customer_id },
-      { where: { google_event_id: { [Op.in]: eventIds } } }
+      { where: { google_event_id: { [Op.in]: eventIds }, user_id: user.user_id } }
     );
 
     await updateConsultationDays(createdCustomer.customer_id);
