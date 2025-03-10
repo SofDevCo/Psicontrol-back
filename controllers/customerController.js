@@ -135,7 +135,10 @@ exports.upsertCustomer = async (userId, customerData) => {
       customer_dob: formattedCustomerDob,
     });
 
-    if (previousConsultationFee !== newConsultationFee) {
+    if (
+      parseFloat(previousConsultationFee) !== newConsultationFee &&
+      consultation_fee !== undefined
+    ) {
       const updateResult = await updateConsultationFee(
         customer.customer_id,
         newConsultationFee,

@@ -83,6 +83,10 @@ const updateConsultationFee = async (customerId, newFee, updateFrom) => {
     });
 
     if (!existingRecord) {
+      if (newFee === 0) {
+        return { success: true };
+      }
+
       return {
         error: true,
         message: "Paciente não possui registro no mês atual.",
