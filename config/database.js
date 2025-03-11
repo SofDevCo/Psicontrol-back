@@ -1,9 +1,11 @@
 const { Sequelize } = require('sequelize');
 require("dotenv").config();
-const { DATABASE_URL } = process.env;
 
-const sequelize = new Sequelize(DATABASE_URL,{
-    dialect: 'postgres',
-})
+const { DATABASE_URL, DATABASE_URL_STAGING, NODE_ENV } = process.env;
 
-module.exports = { sequelize }; 
+const sequelize = new Sequelize(
+  NODE_ENV === "staging" ? DATABASE_URL_STAGING : DATABASE_URL,
+  { dialect: 'postgres' }
+);
+
+module.exports = { sequelize };

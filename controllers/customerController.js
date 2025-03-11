@@ -135,7 +135,10 @@ exports.upsertCustomer = async (userId, customerData) => {
       customer_dob: formattedCustomerDob,
     });
 
-    if (previousConsultationFee !== newConsultationFee) {
+    if (
+      parseFloat(previousConsultationFee) !== newConsultationFee &&
+      consultation_fee !== undefined
+    ) {
       const updateResult = await updateConsultationFee(
         customer.customer_id,
         newConsultationFee,
@@ -243,7 +246,12 @@ exports.createCustomer = async (req, res) => {
   if (eventIds.length > 0) {
     await Event.update(
       { customer_id: createdCustomer.customer_id },
-      { where: { google_event_id: { [Op.in]: eventIds }, user_id: user.user_id } }
+      {
+        where: {
+          google_event_id: { [Op.in]: eventIds },
+          user_id: user.user_id,
+        },
+      }
     );
 
     await updateConsultationDays(createdCustomer.customer_id);
@@ -342,7 +350,6 @@ exports.getProfileCustomer = async (req, res) => {
       "customer_dob",
       "customer_phone",
       "customer_personal_message",
-      "customer_dob",
     ],
     include: [
       {
@@ -367,12 +374,29 @@ exports.getProfileCustomer = async (req, res) => {
   const age = calculateAge(customer.customer_dob);
 
   const customerData = customer.toJSON();
+
   customerData.customer_personal_message =
     customerData.customer_personal_message
       ? customerData.customer_personal_message
           .split("\n")
           .filter((line) => line.trim() !== "")
       : [];
+
+  if (!Array.isArray(customerData.CustomersBillingRecords)) {
+    return res.status(200).json({ ...customerData, age, billingRecords: [] });
+  }
+
+  const activeEvents = await Event.findAll({
+    where: {
+      customer_id: customer.customer_id,
+      status: { [Op.not]: "cancelado" },
+    },
+    attributes: ["date"],
+  });
+
+  const activeDays = new Set(
+    activeEvents.map((event) => event.date.split("-")[2])
+  );
 
   const groupedBilling = {};
 
@@ -389,10 +413,14 @@ exports.getProfileCustomer = async (req, res) => {
       };
     }
 
-    const daysArray = consultation_days
-      ? consultation_days.split(",").map((day) => day.trim(), 10)
+    const filteredDays = consultation_days
+      ? consultation_days
+          .split(",")
+          .map((day) => day.trim())
+          .filter((day) => activeDays.has(day))
       : [];
-    const numConsultations = daysArray.length;
+
+    const numConsultations = filteredDays.length;
     const consultationFee = parseFloat(consultation_fee || 0);
 
     groupedBilling[month_and_year].num_consultations += numConsultations;
@@ -400,7 +428,7 @@ exports.getProfileCustomer = async (req, res) => {
       numConsultations * consultationFee;
     groupedBilling[month_and_year].consultation_days = [
       ...groupedBilling[month_and_year].consultation_days,
-      ...daysArray,
+      ...filteredDays,
     ];
   });
 

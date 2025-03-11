@@ -287,12 +287,10 @@ const checkAndHandleCalendars = async (req, res) => {
   });
 
   if (!enabledCalendars || enabledCalendars.length === 0) {
-    console.log("Nenhum calendário habilitado. Redirecionando para seleção.");
     return res.json({ redirect: "/select-calendar" });
   }
 
   const calendarIds = enabledCalendars.map((calendar) => calendar.calendar_id);
-  console.log("Calendários habilitados encontrados:", calendarIds);
 
   return res.json({
     redirect: `/create-event-form?calendarIds=${calendarIds.join(",")}`,
