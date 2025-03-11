@@ -1,269 +1,175 @@
 const { income, User } = require("../models");
-const { format, parseISO, subMonths, isoDate } = require("date-fns");
+const { format, parseISO, subMonths } = require("date-fns");
 const { ptBR } = require("date-fns/locale");
-const {
-  formatDateBrazilian,
-  parseISODate,
-  parseBrazilianDate,
-  formatDateIso,
-} = require("../utils/dateUtils"); // Altere para o caminho correto
+const { parseBrazilianDate, formatDateIso } = require("../utils/dateUtils");
 
 const revenueController = {
   addRevenue: async (req, res) => {
-    try {
-      const { date, name, value } = req.body;
-      const user = req.user;
+    const { date, name, value } = req.body;
+    const user = req.user;
 
-      // Usa a função para analisar a data no formato brasileiro
-      const parsedDate = parseBrazilianDate(date);
-      if (!parsedDate) {
-        return res.status(400).json({ error: "Data inválida" });
-      }
+    const parsedDate = parseBrazilianDate(date);
+    if (!parsedDate) return res.status(400).json({ error: "Data inválida" });
 
-      const isoDate = formatDateIso(parsedDate); // Converte a data para o formato ISO
-      const monthYear = format(parsedDate, "MM/yy"); // Extraí mês e ano
+    const isoDate = formatDateIso(parsedDate);
+    const monthYear = format(parsedDate, "MM/yy");
 
-      const revenue = await income.create({
-        user_id: user.user_id,
-        date: isoDate,
-        name,
-        value,
-        type: "revenue",
-        month_year: monthYear,
-      });
-      res.status(201).json(revenue);
-    } catch (error) {
-      console.error("Erro ao adicionar receita:", error.message);
-      res.status(500).json({ error: "Erro ao adicionar receita" });
-    }
+    const revenue = await income.create({
+      user_id: user.user_id,
+      date: isoDate,
+      name,
+      value,
+      type: "revenue",
+      month_year: monthYear,
+    });
+    res.status(201).json(revenue);
   },
 
   addExpense: async (req, res) => {
-    try {
-      const { date, name, value } = req.body;
-      const user = req.user;
+    const { date, name, value } = req.body;
+    const user = req.user;
 
-      const parsedDate = parseBrazilianDate(date);
-      if (!parsedDate) {
-        return res.status(400).json({ error: "Data inválida" });
-      }
+    const parsedDate = parseBrazilianDate(date);
+    if (!parsedDate) return res.status(400).json({ error: "Data inválida" });
 
-      const isoDate = formatDateIso(parsedDate);
-      const monthYear = format(parsedDate, "MM/yy");
+    const isoDate = formatDateIso(parsedDate);
+    const monthYear = format(parsedDate, "MM/yy");
 
-      const expense = await income.create({
-        user_id: user.user_id,
-        date: isoDate,
-        name,
-        value,
-        type: "expense",
-        month_year: monthYear,
-      });
-      res.status(201).json(expense);
-    } catch (error) {
-      console.error("Erro ao adicionar despesa:", error.message);
-      res.status(500).json({ error: "Erro ao adicionar despesa" });
-    }
+    const expense = await income.create({
+      user_id: user.user_id,
+      date: isoDate,
+      name,
+      value,
+      type: "expense",
+      month_year: monthYear,
+    });
+    res.status(201).json(expense);
   },
 
   repeatLastMonthEntries: async (req, res) => {
-    try {
-      const { selectedMonth, selectedYear } = req.body;
-      const user = req.user;
+    const { selectedMonth, selectedYear } = req.body;
+    const user = req.user;
 
-      if(!selectedMonth ||  !selectedYear){
-        return res.status(400).json({ error: "Mês e ano são obrigatórios"})
-      }
-  
-      const selectedDateString = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-01`;
-      const selectedDate = parseISO(selectedDateString);
-
-      if (isNaN(selectedDate)) {
-        return res.status(400).json({ error: "Data selecionada inválida" });
-      }
-  
-      const currentMonth = format(selectedDate, "MM/yy");
-  
-      const existingEntries = await income.findOne({
-        where: {
-          user_id: user.user_id,
-          month_year: currentMonth,
-        },
-      });
-  
-      if (existingEntries) {
-        // Apenas bloqueia a operação, mas não envia a mensagem de erro
-        return res.status(400).end(); // Retorna apenas o status sem mensagem
-      }
-      
-  
-      // Calcula o mês anterior ao mês selecionado
-      const lastMonthDate = subMonths(selectedDate, 1); // Data do mês anterior
-      const lastMonth = format(lastMonthDate, "MM/yy"); // Mês de origem
-  
-      // Buscar receitas e despesas do mês anterior
-      const revenuesLastMonth = await income.findAll({
-        where: {
-          user_id: user.user_id,
-          type: "revenue",
-          month_year: lastMonth,
-        },
-      });
-  
-      const expensesLastMonth = await income.findAll({
-        where: {
-          user_id: user.user_id,
-          type: "expense",
-          month_year: lastMonth,
-        },
-      });
-  
-      const newRevenues = revenuesLastMonth.map((revenue) => ({
-        user_id: revenue.user_id,
-        date: format(selectedDate, "yyyy-MM-dd"),
-        name: revenue.name,
-        value: revenue.value,
-        type: "revenue",
-        month_year: currentMonth, 
-      }));
-  
-      const newExpenses = expensesLastMonth.map((expense) => ({
-        user_id: expense.user_id,
-        date: format(selectedDate, "yyyy-MM-dd"),
-        name: expense.name,
-        value: expense.value,
-        type: "expense",
-        month_year: currentMonth, 
-      }));
-  
-      const createdRevenues = await income.bulkCreate(newRevenues);
-      const createdExpenses = await income.bulkCreate(newExpenses);
-  
-      res.status(201).json({
-        message: "Entradas do mês passado duplicadas com sucesso.",
-        newRevenues: createdRevenues,
-        newExpenses: createdExpenses,
-      });
-    } catch (error) {
-      console.error("Erro ao duplicar entradas:", error.message);
-      res.status(500).json({ error: "Erro ao duplicar entradas" });
+    if (!selectedMonth || !selectedYear) {
+      return res.status(400).json({ error: "Mês e ano são obrigatórios" });
     }
+
+    const selectedDateString = `${selectedYear}-${selectedMonth
+      .toString()
+      .padStart(2, "0")}-01`;
+    const selectedDate = parseISO(selectedDateString);
+
+    if (isNaN(selectedDate))
+      return res.status(400).json({ error: "Data selecionada inválida" });
+
+    const currentMonth = format(selectedDate, "MM/yy");
+    const existingEntries = await income.findOne({
+      where: { user_id: user.user_id, month_year: currentMonth },
+    });
+    if (existingEntries) return res.status(400).end();
+
+    const lastMonthDate = subMonths(selectedDate, 1);
+    const lastMonth = format(lastMonthDate, "MM/yy");
+
+    const revenuesLastMonth = await income.findAll({
+      where: { user_id: user.user_id, type: "revenue", month_year: lastMonth },
+    });
+    const expensesLastMonth = await income.findAll({
+      where: { user_id: user.user_id, type: "expense", month_year: lastMonth },
+    });
+
+    const newRevenues = revenuesLastMonth.map((revenue) => ({
+      user_id: revenue.user_id,
+      date: format(selectedDate, "yyyy-MM-dd"),
+      name: revenue.name,
+      value: revenue.value,
+      type: "revenue",
+      month_year: currentMonth,
+    }));
+
+    const newExpenses = expensesLastMonth.map((expense) => ({
+      user_id: expense.user_id,
+      date: format(selectedDate, "yyyy-MM-dd"),
+      name: expense.name,
+      value: expense.value,
+      type: "expense",
+      month_year: currentMonth,
+    }));
+
+    const createdRevenues = await income.bulkCreate(newRevenues);
+    const createdExpenses = await income.bulkCreate(newExpenses);
+
+    res.status(201).json({
+      message: "Entradas do mês passado duplicadas com sucesso.",
+      newRevenues: createdRevenues,
+      newExpenses: createdExpenses,
+    });
   },
-  
-  
 
   getRevenueByUserId: async (req, res) => {
-    try {
-      const { monthYear } = req.query;
-      const user_id = req.user.user_id;
+    const { monthYear } = req.query;
+    const user_id = req.user.user_id;
 
-      console.log("Consultando receitas para o mês e ano:", monthYear); // Log adicionado
+    const whereClause = { user_id, type: "revenue" };
+    if (monthYear) whereClause.month_year = monthYear;
 
-      const whereClause = { user_id, type: "revenue" };
-      if (monthYear) whereClause.month_year = monthYear;
-
-      const revenues = await income.findAll({ where: whereClause });
-
-      res.status(200).json(revenues);
-    } catch (error) {
-      console.error("Erro ao buscar receitas:", error.message);
-      res.status(500).json({ error: "Erro ao buscar receitas" });
-    }
+    const revenues = await income.findAll({ where: whereClause });
+    res.status(200).json(revenues);
   },
 
   getExpenseByUserId: async (req, res) => {
-    try {
-      const { monthYear } = req.query;
-      const user_id = req.user.user_id;
+    const { monthYear } = req.query;
+    const user_id = req.user.user_id;
 
-      const whereClause = { user_id, type: "expense" };
-      if (monthYear) whereClause.month_year = monthYear;
+    const whereClause = { user_id, type: "expense" };
+    if (monthYear) whereClause.month_year = monthYear;
 
-      const expenses = await income.findAll({ where: whereClause });
-
-      res.status(200).json(expenses);
-    } catch (error) {
-      console.error("Erro ao buscar despesas:", error.message);
-      res.status(500).json({ error: "Erro ao buscar despesas" });
-    }
+    const expenses = await income.findAll({ where: whereClause });
+    res.status(200).json(expenses);
   },
 
   getEntriesByMonthAndYear: async (req, res) => {
-    try {
-      const { month, year } = req.query;
-      const user_id = req.user.user_id;
+    const { month, year } = req.query;
+    const user_id = req.user.user_id;
 
-      if (!month || !year) {
-        return res.status(400).json({ message: "Mês e ano são obrigatórios." });
-      }
+    if (!month || !year)
+      return res.status(400).json({ message: "Mês e ano são obrigatórios." });
 
-      const monthYear = `${month}/${year.slice(-2)}`;
-      console.log("Consultando entradas para:", monthYear);
+    const monthYear = `${month}/${year.slice(-2)}`;
+    const revenues = await income.findAll({
+      where: { ...whereClause, type: "revenue", month_year: monthYear },
+    });
+    const expenses = await income.findAll({
+      where: { ...whereClause, type: "expense", month_year: monthYear },
+    });
 
-      const whereClause = { user_id };
-      const revenues = await income.findAll({
-        where: { ...whereClause, type: "revenue", month_year: monthYear },
-      });
-      const expenses = await income.findAll({
-        where: { ...whereClause, type: "expense", month_year: monthYear },
-      });
-
-      res.status(200).json({ revenues, expenses });
-    } catch (error) {
-      console.error("Erro ao buscar entradas:", error.message);
-      res.status(500).json({ error: "Erro ao buscar entradas" });
-    }
+    res.status(200).json({ revenues, expenses });
   },
 
   deleteRevenue: async (req, res) => {
-    try {
-      const { id } = req.params;
-
-      const revenue = await income.destroy({
-        where: { id },
-      });
-
-      if (revenue > 0) {
-        res.status(200).json({ message: "Receita deletada com sucesso" });
-      } else {
-        res.status(404).json({ error: "Receita não encontrada" });
-      }
-    } catch (error) {
-      console.error("Erro ao deletar receita:", error.message);
-      res.status(500).json({ error: "Erro ao deletar receita" });
+    const { id } = req.params;
+    const revenue = await income.destroy({ where: { id } });
+    if (revenue > 0) {
+      res.status(200).json({ message: "Receita deletada com sucesso" });
+    } else {
+      res.status(404).json({ error: "Receita não encontrada" });
     }
   },
 
   deleteExpense: async (req, res) => {
-    try {
-      const { id } = req.params;
-      const expense = await income.destroy({
-        where: { id },
-      });
-
-      if (expense > 0) {
-        console.log("Despesa deletada com sucesso:", expense);
-        res.status(200).json({ message: "Despesa deletada com sucesso" });
-      } else {
-        res.status(404).json({ error: "Despesa não encontrada" });
-      }
-    } catch (error) {
-      console.error("Erro ao deletar despesa:", error.message);
-      res.status(500).json({ error: "Erro ao deletar despesa" });
+    const { id } = req.params;
+    const expense = await income.destroy({ where: { id } });
+    if (expense > 0) {
+      res.status(200).json({ message: "Despesa deletada com sucesso" });
+    } else {
+      res.status(404).json({ error: "Despesa não encontrada" });
     }
   },
 
   getEntriesByUserId: async (req, res) => {
-    try {
-      const user = req.user;
-      const entries = await User.findAll({
-        where: { user_id: user.user_id },
-      });
-      res.status(200).json(entries);
-    } catch (error) {
-      console.error("Erro ao obter entradas:", error.message);
-      res.status(500).json({ error: "Erro ao obter entradas" });
-    }
+    const user = req.user;
+    const entries = await User.findAll({ where: { user_id: user.user_id } });
+    res.status(200).json(entries);
   },
 };
 
