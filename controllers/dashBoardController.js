@@ -52,7 +52,7 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
     return acc;
   }, {});
 
-  const filteredBillingRecords = billingRecords.map((record) => {
+  let filteredBillingRecords = billingRecords.map((record) => {
     const activeDays = activeDaysByCustomer[record.customer_id] || new Set();
     const filteredDays = record.consultation_days
       ? record.consultation_days
@@ -67,6 +67,10 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
       num_consultations: filteredDays.length,
     };
   });
+
+  filteredBillingRecords = filteredBillingRecords.filter(
+    (record) => record.num_consultations > 0
+  );
 
   const totalConsultations = filteredBillingRecords.reduce(
     (acc, record) => acc + record.num_consultations,
