@@ -8,6 +8,7 @@ const { saveTokens } = require("./tokenController");
 const { updateConsultationDays } = require("../utils/updateFunctions");
 const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 const bcrypt = require("bcrypt");
+const { v4: uuidv4 } = require("uuid");
 const CLIENT_TIMEZONE = "America/Sao_Paulo";
 
 const fetchGoogleCalendars = async (accessToken) => {
@@ -90,7 +91,11 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
         console.warn("Evento sem summary:", event);
       }
 
-      let patients = await Customer.findAll();
+      let patients = await Customer.findAll({
+        where: {
+          deleted: null,
+        },
+      });
 
       const cleanSummary = summary.replace(/^Paciente - /i, "").trim();
 
@@ -262,7 +267,7 @@ async function handleOAuth2Callback(req, res) {
     tokens.refresh_token
   );
 
-  const authenticationToken = bcrypt.hashSync(new Date().toISOString(), 10);
+  const authenticationToken = uuidv4();
 
   const user = await User.findOne({ where: { user_email: data.email } });
   user.autentication_token = authenticationToken;
