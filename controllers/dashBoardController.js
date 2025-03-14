@@ -21,10 +21,23 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
       .json({ error: "Os campos 'month' e 'year' são obrigatórios." });
   }
 
+  const deletedCustomers = await CustomersBillingRecords.findAll({
+    where: {
+      deleted: { [Op.not]: null },
+      month_and_year: { [Op.lte]: `${year}-${month.padStart(2, "0")}` },
+    },
+    attributes: ["customer_id"],
+  });
+
+  const deletedCustomerIds = deletedCustomers.map(
+    (record) => record.customer_id
+  );
+
   const billingRecords = await CustomersBillingRecords.findAll({
     where: {
       month_and_year: { [Op.like]: `${year}-${month.padStart(2, "0")}%` },
       deleted: null,
+      customer_id: { [Op.notIn]: deletedCustomerIds },
     },
     include: [
       {

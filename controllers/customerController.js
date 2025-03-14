@@ -14,7 +14,12 @@ const {
   validatePhoneNumber,
   validateEmail,
 } = require("../utils/Validators");
-const { parseISO, isAfter: dateFnsIsAfter, format } = require("date-fns");
+const {
+  parseISO,
+  isAfter: dateFnsIsAfter,
+  format,
+  addMonths,
+} = require("date-fns");
 const { Op } = require("sequelize");
 const { cancelEventByGoogleId } = require("../services/eventService");
 const {
@@ -505,6 +510,7 @@ exports.deleteCustomer = async (req, res) => {
   }
 
   const deletionDate = new Date();
+  const deletionMonthYear = format(deletionDate, "yyyy-MM");
 
   const [updated] = await Customer.update(
     { deleted: deleted },
@@ -529,14 +535,14 @@ exports.deleteCustomer = async (req, res) => {
     }
   }
 
-  const deletionMonthYear = format(deletionDate, "yyyy-MM");
+  const nextMonthYear = format(addMonths(deletionDate, 1), "yyyy-MM");
 
   await CustomersBillingRecords.update(
     { deleted: true },
     {
       where: {
         customer_id: customerId,
-        month_and_year: { [Op.gt]: deletionMonthYear },
+        month_and_year: { [Op.gte]: nextMonthYear },
       },
     }
   );
