@@ -23,6 +23,13 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+var Rollbar = require('rollbar');
+var rollbar = new Rollbar({
+  accessToken: '769eaa6035aa4191af9e0fb92c4b5c37',
+  captureUncaught: true,
+  captureUnhandledRejections: true,
+});
+
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -48,3 +55,4 @@ app.use("/message", verifyToken, messageRoutes);
 app.listen(port, () => {
   console.log(`Servidor rodando em http://localhost:${port}`);
 });
+
