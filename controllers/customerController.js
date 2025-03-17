@@ -497,7 +497,7 @@ exports.updateCustomerMessage = async (req, res) => {
 
 exports.deleteCustomer = async (req, res) => {
   const { customerId } = req.params;
-  const userId = req.user.user_id;
+  const userId = req.user?.user_id;
   const { deleted } = req.body;
 
   const customer = await Customer.findOne({
@@ -522,7 +522,11 @@ exports.deleteCustomer = async (req, res) => {
   }
 
   const events = await Event.findAll({
-    where: { customer_id: customerId, status: { [Op.notIn]: ["cancelado"] } },
+    where: {
+      customer_id: customerId,
+      user_id: userId,
+      status: { [Op.notIn]: ["cancelado"] },
+    },
     attributes: ["date", "google_event_id"],
   });
 
@@ -530,22 +534,31 @@ exports.deleteCustomer = async (req, res) => {
     const eventDate = parseISO(event.date);
     if (dateFnsIsAfter(eventDate, deletionDate)) {
       if (event.google_event_id) {
-        await cancelEventByGoogleId(event.google_event_id);
+        await cancelEventByGoogleId(event.google_event_id, userId);
       }
     }
   }
 
   const nextMonthYear = format(addMonths(deletionDate, 1), "yyyy-MM");
+  const currentMonthYear = format(new Date(), "yyyy-MM");
 
-  await CustomersBillingRecords.update(
-    { deleted: true },
-    {
-      where: {
-        customer_id: customerId,
-        month_and_year: { [Op.gte]: nextMonthYear },
-      },
+  if (nextMonthYear !== currentMonthYear) {
+    const isCustomerDeletedForUser = await Customer.findOne({
+      where: { customer_id: customerId, user_id: userId, deleted: true },
+    });
+
+    if (isCustomerDeletedForUser) {
+      await CustomersBillingRecords.update(
+        { deleted: true },
+        {
+          where: {
+            customer_id: customerId,
+            month_and_year: { [Op.gte]: nextMonthYear },
+          },
+        }
+      );
     }
-  );
+  }
 
   const currentRecord = await CustomersBillingRecords.findOne({
     where: { customer_id: customerId, month_and_year: deletionMonthYear },

@@ -15,10 +15,10 @@ exports.deleteEventById = async (customers_id) => {
   return result;
 };
 
-exports.cancelEventByGoogleId = async (googleEventId) => {
+exports.cancelEventByGoogleId = async (googleEventId, userId) => {
   await Event.update(
     { status: "cancelado" },
-    { where: { google_event_id: googleEventId } }
+    { where: { google_event_id: googleEventId, user_id: userId } }
   );
 };
 

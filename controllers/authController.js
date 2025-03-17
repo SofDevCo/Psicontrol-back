@@ -87,7 +87,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
       if (!event.summary) console.warn("Evento sem summary:", event);
 
       let patients = await Customer.findAll({
-        where: { deleted: null },
+        where: { deleted: null, user_id: user.user_id },
       });
 
       const cleanSummary = summary.replace(/^Paciente - /i, "").trim();
@@ -97,7 +97,8 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
           p.customer_calendar_name
             .replace(/^Paciente - /i, "")
             .trim()
-            .toLowerCase() === cleanSummary.toLowerCase()
+            .toLowerCase() === cleanSummary.toLowerCase() &&
+          p.user_id === user.user_id
       );
 
       if (!bestMatch) {
@@ -174,14 +175,15 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
     }
 
     global.unmatchedEventsCache = unmatchedEvents;
-    await deleteNonexistentGoogleEvents(events, calendarId);
+    await deleteNonexistentGoogleEvents(events, calendarId, user.user_id);
   }
 };
 
-const deleteNonexistentGoogleEvents = async (events, calendarId) => {
+const deleteNonexistentGoogleEvents = async (events, calendarId, userId) => {
   const googleEventIds = events.map((event) => event.id);
+
   const allDbEvents = await Event.findAll({
-    where: { calendar_id: calendarId },
+    where: { calendar_id: calendarId, user_id: userId },
   });
 
   for (const dbEvent of allDbEvents) {
