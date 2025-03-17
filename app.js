@@ -9,6 +9,7 @@ const revenueRoutes = require("./routes/revenueRoutes");
 const userRoutes = require("./routes/userRoutes");
 const dashBoardRoutes = require("./routes/dashBoardRoutes");
 const messageRoutes = require("./routes/messageRoutes");
+const Rollbar = require('rollbar');
 const {
   handleOAuth2Callback,
   initiateGoogleAuth,
@@ -23,11 +24,21 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-var Rollbar = require('rollbar');
-var rollbar = new Rollbar({
+const rollbar = new Rollbar({
   accessToken: '769eaa6035aa4191af9e0fb92c4b5c37',
   captureUncaught: true,
   captureUnhandledRejections: true,
+});
+
+app.use(rollbar.errorHandler());
+
+app.get("/erro-teste", (req, res) => {
+  try {
+    throw new Error("Erro de teste no Rollbar!");
+  } catch (error) {
+    rollbar.error(error); // Envia para o Rollbar
+    res.status(500).json({ error: "Algo deu errado!" });
+  }
 });
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
