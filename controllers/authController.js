@@ -87,7 +87,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
       if (!event.summary) console.warn("Evento sem summary:", event);
 
       let patients = await Customer.findAll({
-        where: { deleted: null, user_id: user.user_id },
+        where: { deleted: false, user_id: user.user_id },
       });
 
       const cleanSummary = summary.replace(/^Paciente - /i, "").trim();
