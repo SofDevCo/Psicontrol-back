@@ -21,11 +21,11 @@ const fetchGoogleCalendarEvents = async (accessToken, calendarId) => {
   oauth2Client.setCredentials({ access_token: accessToken });
 
   const now = new Date();
-  const twoMonthsBefore = new Date();
-  const twoMonthsAfter = new Date();
+  const oneMonthBefore = new Date();
+  const oneMonthAfter = new Date();
 
-  twoMonthsBefore.setMonth(now.getMonth() - 2);
-  twoMonthsAfter.setMonth(now.getMonth() + 2);
+  oneMonthBefore.setMonth(now.getMonth() - 1);
+  oneMonthAfter.setMonth(now.getMonth() + 1);
 
   const response = await calendar.events.list({
     calendarId: calendarId,
