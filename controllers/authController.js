@@ -54,13 +54,12 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
   for (const calendar of calendars) {
     const calendarId = calendar.id;
 
-    const calendarUsers = await Calendar.findAll({
-      where: { calendar_id: calendarId },
-      attributes: ["user_id"],
+    let dbCalendar = await Calendar.findOne({
+      where: { calendar_id: calendarId, user_id: user.user_id },
     });
 
-    if (calendarUsers.length === 0) {
-      await Calendar.create({
+    if (!dbCalendar) {
+      dbCalendar = await Calendar.create({
         calendar_id: calendarId,
         calendar_name: calendar.summary,
         user_id: user.user_id,
@@ -77,11 +76,12 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
       const uniqueKey = `${summary}_${
         event.start?.date || event.start?.dateTime?.split("T")[0]
       }`;
+
       if (processedEvents.has(uniqueKey)) continue;
       processedEvents.add(uniqueKey);
 
       const existingEvents = await Event.findAll({
-        where: { google_event_id: event.id },
+        where: { google_event_id: event.id, user_id: user.user_id },
       });
 
       if (!event.summary) console.warn("Evento sem summary:", event);
@@ -97,8 +97,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
           p.customer_calendar_name
             .replace(/^Paciente - /i, "")
             .trim()
-            .toLowerCase() === cleanSummary.toLowerCase() &&
-          p.user_id === user.user_id
+            .toLowerCase() === cleanSummary.toLowerCase()
       );
 
       if (!bestMatch) {
@@ -137,40 +136,38 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
         startDate = event.start.date;
       }
 
-      for (const calendarUser of calendarUsers) {
-        const userId = calendarUser.user_id;
+      const userId = user.user_id;
 
-        const eventExistsForUser = existingEvents.some(
-          (e) => e.user_id === userId
-        );
+      const eventExistsForUser = existingEvents.some(
+        (e) => e.user_id === userId
+      );
 
-        if (!eventExistsForUser) {
-          await Event.create({
-            event_name: summary,
-            date: startDate,
-            google_event_id: event.id,
-            status:
-              existingEvents.length > 0 &&
-              existingEvents[0].status === "cancelado"
-                ? "cancelado"
-                : event.status,
-            calendar_id: calendarId,
-            start_time: startTime,
-            end_time: endTime,
-            user_id: userId,
-            customer_id: customerId,
-          });
-        }
+      if (!eventExistsForUser) {
+        await Event.create({
+          event_name: summary,
+          date: startDate,
+          google_event_id: event.id,
+          status:
+            existingEvents.length > 0 &&
+            existingEvents[0].status === "cancelado"
+              ? "cancelado"
+              : event.status,
+          calendar_id: calendarId,
+          start_time: startTime,
+          end_time: endTime,
+          user_id: userId,
+          customer_id: customerId,
+        });
+      }
 
-        if (customerId) {
-          await updateConsultationDays(customerId);
-        } else {
-          unmatchedEvents.push({
-            event_name: summary,
-            date: startDate,
-            user_id: userId,
-          });
-        }
+      if (customerId) {
+        await updateConsultationDays(customerId);
+      } else {
+        unmatchedEvents.push({
+          event_name: summary,
+          date: startDate,
+          user_id: userId,
+        });
       }
     }
 
