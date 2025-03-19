@@ -112,6 +112,13 @@ exports.upsertCustomer = async (userId, customerData) => {
     };
   }
 
+  const formattedConsultationFee =
+    consultation_fee === "" ||
+    consultation_fee === undefined ||
+    consultation_fee === null
+      ? 0.0
+      : parseFloat(consultation_fee);
+
   if (customer_id) {
     const customer = await Customer.findOne({
       where: { customer_id, user_id: userId },
@@ -191,7 +198,7 @@ exports.upsertCustomer = async (userId, customerData) => {
       customer_dob: formattedCustomerDob,
       archived: false,
       deleted: false,
-      consultation_fee,
+      consultation_fee: formattedConsultationFee,
       customer_emergency_name,
       customer_emergency_relationship,
       customer_emergency_contact: formattedEmergencyContact,
