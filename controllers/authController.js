@@ -29,8 +29,8 @@ const fetchGoogleCalendarEvents = async (accessToken, calendarId) => {
 
   const response = await calendar.events.list({
     calendarId: calendarId,
-    timeMin: twoMonthsBefore.toISOString(),
-    timeMax: twoMonthsAfter.toISOString(),
+    timeMin: oneMonthBefore.toISOString(),
+    timeMax: oneMonthAfter.toISOString(),
     singleEvents: true,
     orderBy: "startTime",
   });
