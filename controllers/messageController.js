@@ -72,6 +72,7 @@ exports.sendWhatsAppMessage = async (req, res) => {
     dias: formattedDays,
     valor_total: totalConsultationFee.replace(".", ","),
     clinic_name: user.clinic_name || "Consultório",
+    numero_de_consultas: totalConsultations,
   };
 
   const template = Handlebars.compile(user.user_message);
@@ -187,6 +188,7 @@ exports.sendEmailMessage = async (req, res) => {
     dias: formattedDays,
     valor_total: totalConsultationFee.replace(".", ","),
     clinic_name: user.clinic_name || "Consultório",
+    numero_de_consultas: totalConsultations,
   };
 
   const template = Handlebars.compile(user.user_message);
