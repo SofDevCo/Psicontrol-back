@@ -1,0 +1,24 @@
+name: Deploy Backend to Staging
+
+on:
+  push:
+    branches:
+      - staging 
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Fly CLI
+      uses: superfly/flyctl-actions/setup-flyctl@v1
+      with:
+        flyctl_version: "latest"
+
+    - name: Fly.io Deploy
+      run: |
+        flyctl auth login --access-token ${{ secrets.FLY_API_TOKEN_BACKEND }}
+        flyctl deploy --config fly.staging.toml -a psicontrol-back-staging
