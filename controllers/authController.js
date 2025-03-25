@@ -110,13 +110,15 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
 
         const fuse = new Fuse(cleanPatients, {
           keys: ["customer_calendar_name"],
-          threshold: 0.05,
+          threshold: 0.2,
           distance: 100,
+          includeScore: true,
           findAllMatches: true,
         });
 
         const result = fuse.search(cleanSummary);
-        bestMatch = result.length > 0 ? result[0].item : null;
+        bestMatch =
+          result.length > 0 && result[0].score < 0.15 ? result[0].item : null;
       }
 
       let customerId = bestMatch ? bestMatch.customer_id : null;

@@ -234,22 +234,32 @@ exports.createCustomer = async (req, res) => {
 
   const cleanCustomerName = createdCustomer.customer_calendar_name
     .replace(/^Paciente - /i, "")
-    .trim();
+    .trim()
+    .toLowerCase();
 
   const cleanUnmatchedEvents = unmatchedEvents.map((event) => ({
     ...event,
     event_name: event.event_name.replace(/^Paciente - /i, "").trim(),
   }));
 
-  const fuse = new Fuse(cleanUnmatchedEvents, {
-    keys: ["event_name"],
-    threshold: 0.05,
-    distance: 100,
-    findAllMatches: true,
-  });
+  let matchedEvents = cleanUnmatchedEvents.filter(
+    (e) => e.event_name.toLowerCase() === cleanCustomerName
+  );
 
-  const result = fuse.search(cleanCustomerName);
-  const matchedEvents = result.map((r) => r.item);
+  if (matchedEvents.length === 0) {
+    const fuse = new Fuse(cleanUnmatchedEvents, {
+      keys: ["event_name"],
+      threshold: 0.2,
+      distance: 100,
+      includeScore: true,
+      findAllMatches: true,
+    });
+
+    const result = fuse.search(cleanCustomerName);
+    const fuzzyMatches = result.filter((r) => r.score < 0.1).map((r) => r.item);
+
+    matchedEvents.push(...fuzzyMatches);
+  }
 
   const eventIds = matchedEvents
     .map((e) => e.dataValues?.google_event_id)
