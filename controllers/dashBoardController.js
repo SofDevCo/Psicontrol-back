@@ -69,9 +69,9 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
     const activeDays = activeDaysByCustomer[record.customer_id] || new Set();
     const filteredDays = record.consultation_days
       ? record.consultation_days
-          .split(",")
-          .map((day) => day.trim())
-          .filter((day) => activeDays.has(day))
+        .split(",")
+        .map((day) => day.trim())
+        .filter((day) => activeDays.has(day))
       : [];
 
     return {
@@ -147,6 +147,77 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
     netRevenue: parseFloat(netRevenue).toFixed(2),
     netTime,
   });
+};
+
+exports.revertSendingInvoice = async (req, res) => {
+  const { customer_id, month_and_year } = req.body;
+
+  if (!customer_id || !month_and_year) {
+    return res.status(400).json({ error: "Dados incompletos." });
+  }
+
+  try {
+    await CustomersBillingRecords.update(
+      {
+        sending_invoice: false
+      },
+      {
+        where: { customer_id, month_and_year }
+      }
+    );
+
+    res.status(200).json({ message: "Cobrança revertida com sucesso." });
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao reverter cobrança." });
+  }
+};
+
+exports.revertPaymentConfirmation = async (req, res) => {
+  const { customer_id, month_and_year } = req.body;
+
+  if (!customer_id || !month_and_year) {
+    return res.status(400).json({ error: "Dados incompletos." });
+  }
+
+  try {
+    await CustomersBillingRecords.update(
+      {
+        was_charged: false,
+        payment_status: "",
+        payment_amount: null
+      },
+      {
+        where: { customer_id, month_and_year }
+      }
+    );
+
+    res.status(200).json({ message: "Confirmação de pagamento revertida com sucesso." });
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao reverter confirmação de pagamento." });
+  }
+};
+
+exports.revertBillOfSale = async (req, res) => {
+  const { customer_id, month_and_year } = req.body;
+
+  if (!customer_id || !month_and_year) {
+    return res.status(400).json({ error: "Dados incompletos." });
+  }
+
+  try {
+    await CustomersBillingRecords.update(
+      {
+        bill_of_sale: false
+      },
+      {
+        where: { customer_id, month_and_year }
+      }
+    );
+
+    res.status(200).json({ message: "Recibo revertido com sucesso." });
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao reverter recibo." });
+  }
 };
 
 exports.Partialpayment = async (req, res) => {
