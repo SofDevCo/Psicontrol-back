@@ -67,6 +67,10 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
       });
     }
 
+    if (!dbCalendar.enabled) {
+      continue;
+    }
+
     const events = await fetchGoogleCalendarEvents(accessToken, calendarId);
     const unmatchedEvents = [];
     const processedEvents = new Set();
