@@ -6,5 +6,8 @@ router.get("/billing-records", dashBoardController.getBillingRecordsByMonthAndYe
 router.post("/update-partial-payment", dashBoardController.Partialpayment);
 router.post("/confirm-payment", dashBoardController.confirmPayment);
 router.post("/confirmBillOfSale", dashBoardController.confirmBillOfSale);
+router.post('/revert-sending-invoice', dashBoardController.revertSendingInvoice);
+router.post('/revert-payment-confirmation', dashBoardController.revertPaymentConfirmation);
+router.post('/revert-bill-of-sale', dashBoardController.revertBillOfSale);
 
 module.exports = router;
