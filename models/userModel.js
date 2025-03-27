@@ -48,11 +48,13 @@ const User = sequelize.define(
     },
     user_message: {
       type: DataTypes.TEXT,
-      allowNull: true, // Permite que o campo seja nulo caso não haja mensagem
+      allowNull: true,
+      defaultValue:
+        "Olá, {{nome}}! Estou enviando essa mensagem para passar os valores das consultas realizadas no mês de {{mês}}, nos dias {{dias}}. O valor total dos atendimentos é de R$ {{numero_de_consultas}}. Segue abaixo os dados para pagamento: Código Pix: Banco: Agencia: 0000 CC: 0000000- Atenciosamente, {{clinic_name}}"
     },
     clinic_name: {
-      type: DataTypes.STRING(255), // Novo campo para "Nome/Clínica"
-      allowNull: true, // Permite ser nulo inicialmente
+      type: DataTypes.STRING(255),
+      allowNull: true,
     },
     image: {
       type: DataTypes.STRING(255),
