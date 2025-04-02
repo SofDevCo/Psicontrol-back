@@ -544,14 +544,19 @@ exports.deleteCustomer = async (req, res) => {
       user_id: userId,
       status: { [Op.notIn]: ["cancelado"] },
     },
-    attributes: ["date", "google_event_id"],
+    attributes: ["customers_id", "date", "google_event_id"],
   });
 
   for (const event of events) {
     const eventDate = parseISO(event.date);
+
     if (dateFnsIsAfter(eventDate, deletionDate)) {
       if (event.google_event_id) {
         await cancelEventByGoogleId(event.google_event_id, userId);
+      }
+      if (event.customers_id) {
+        await event.update({ status: "cancelado" });
+        console.error("Evento sem identificador válido:", event);
       }
     }
   }
