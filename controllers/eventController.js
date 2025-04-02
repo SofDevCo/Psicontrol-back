@@ -296,26 +296,19 @@ exports.addConsultationDay = async (req, res) => {
 
   const formattedDate = `${monthYear}-${day.padStart(2, "0")}`;
 
-  const event = {
-    event_name: customer.customer_name,
-    date: formattedDate,
-    calendarId,
-  };
-
-  const googleEventId = await createEventInGoogleCalendar(event, calendarId);
-
   await Event.create({
     event_name: customer.customer_name,
     date: formattedDate,
     calendar_id: calendarId,
-    google_event_id: googleEventId,
+    google_event_id: null,
     status: "confirmed",
     user_id: customer.user_id,
     customer_id: customerId,
   });
 
   return res.status(200).json({
-    message: "Dia adicionado e evento criado no Google Calendar com sucesso.",
+    message:
+      "Dia adicionado e evento registrado no banco de dados com sucesso.",
   });
 };
 
