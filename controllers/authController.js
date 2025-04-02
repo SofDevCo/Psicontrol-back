@@ -15,15 +15,33 @@ const fetchGoogleCalendars = async (accessToken) => {
   return response.data.items;
 };
 
+const getLastDayOfMonth = (year, month) => {
+  const nextMonth = new Date(year, month + 1, 0);
+  return nextMonth.getDate();
+};
+
 const fetchGoogleCalendarEvents = async (accessToken, calendarId) => {
   oauth2Client.setCredentials({ access_token: accessToken });
 
   const now = new Date();
   const oneMonthBefore = new Date();
-  const oneMonthAfter = new Date();
+
+  const lastDayOfNextMonth = getLastDayOfMonth(
+    now.getFullYear(),
+    now.getMonth() + 1
+  );
+
+  const oneMonthAfter = new Date(
+    now.getFullYear(),
+    now.getMonth() + 1,
+    lastDayOfNextMonth,
+    23,
+    59,
+    59,
+    999
+  );
 
   oneMonthBefore.setMonth(now.getMonth() - 1);
-  oneMonthAfter.setMonth(now.getMonth() + 1);
 
   const response = await calendar.events.list({
     calendarId: calendarId,

@@ -41,7 +41,7 @@ const syncAllCalendars = async () => {
   }
 };
 
-cron.schedule("*/2 * * * *", sendHealthcheckPing);
+// cron.schedule("*/2 * * * *", sendHealthcheckPing);
 
 cron.schedule("5 * * * *", async () => {
   await syncAllCalendars();

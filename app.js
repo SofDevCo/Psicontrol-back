@@ -4,6 +4,7 @@ const path = require("path");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const { oauth2Client, authUrl } = require("./config/oauth2");
+const healthcheckRoutes = require("./routes/healthcheckRoutes");
 const eventRoutes = require("./routes/eventRoutes");
 const revenueRoutes = require("./routes/revenueRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -24,13 +25,13 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-const rollbar = new Rollbar({
-  accessToken: "769eaa6035aa4191af9e0fb92c4b5c37",
-  captureUncaught: true,
-  captureUnhandledRejections: true,
-});
+// const rollbar = new Rollbar({
+//   accessToken: "769eaa6035aa4191af9e0fb92c4b5c37",
+//   captureUncaught: true,
+//   captureUnhandledRejections: true,
+// });
 
-app.use(rollbar.errorHandler());
+// app.use(rollbar.errorHandler());
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
@@ -43,6 +44,8 @@ app.use(express.urlencoded({ extended: true }));
 app.get("/", (req, res) => {
   res.send("API de Eventos. Use as rotas disponíveis para gerenciar eventos.");
 });
+
+//app.use("/webhook", healthcheckRoutes);
 
 app.get("/google", initiateGoogleAuth);
 app.get("/oauth2callback", handleOAuth2Callback);
