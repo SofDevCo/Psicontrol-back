@@ -206,6 +206,10 @@ const deleteNonexistentGoogleEvents = async (events, calendarId, userId) => {
   });
 
   for (const dbEvent of allDbEvents) {
+    if (dbEvent.google_event_id === null) {
+      continue;
+    }
+
     if (!googleEventIds.includes(dbEvent.google_event_id)) {
       await dbEvent.update({ status: "cancelado" });
     }
