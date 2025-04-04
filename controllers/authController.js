@@ -93,9 +93,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
 
     for (const event of events) {
       const summary = event.summary?.trim() || "Evento Sem Título";
-      const uniqueKey = `${summary}_${
-        event.start?.date || event.start?.dateTime?.split("T")[0]
-      }`;
+      const uniqueKey = `${summary}_${event.id}`;
 
       if (processedEvents.has(uniqueKey)) continue;
       processedEvents.add(uniqueKey);
@@ -161,7 +159,7 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
       const userId = user.user_id;
 
       const eventExistsForUser = existingEvents.some(
-        (e) => e.user_id === userId
+        (e) => e.user_id === userId && e.google_event_id === event.id
       );
 
       if (!eventExistsForUser) {
