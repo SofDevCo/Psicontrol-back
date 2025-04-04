@@ -245,6 +245,14 @@ exports.addConsultationDay = async (req, res) => {
     });
   }
 
+  const maxDay = new Date(year, month, 0).getDate();
+  const dayInt = parseInt(day, 10);
+  if (isNaN(dayInt) || dayInt <= 0 || dayInt > maxDay) {
+    return res
+      .status(400)
+      .json({ error: `Dia inválido para ${month}/${year}` });
+  }
+
   const customer = await Customer.findByPk(customerId);
   if (!customer) {
     return res.status(404).json({ error: "Paciente não encontrado." });
@@ -277,7 +285,7 @@ exports.addConsultationDay = async (req, res) => {
   }
 
   consultationDays.push(day);
-  consultationDays.sort((a, b) => a - b);
+  consultationDays.sort((a, b) => parseInt(a) - parseInt(b));
 
   if (billingRecord) {
     await billingRecord.update({
