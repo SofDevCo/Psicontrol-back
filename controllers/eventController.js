@@ -236,21 +236,25 @@ exports.saveSelectedCalendars = async (req, res) => {
 };
 
 exports.addConsultationDay = async (req, res) => {
-  const { customerId, day, month, year } = req.body;
+  const { customerId, days, month, year } = req.body;
 
-  if (!customerId || !day || !month || !year) {
+  if (!customerId || !days || !Array.isArray(days) || !month || !year) {
     return res.status(400).json({
       error:
-        "Os campos 'customerId', 'day', 'month' e 'year' são obrigatórios.",
+        "Os campos 'customerId', 'days' (array), 'month' e 'year' são obrigatórios.",
     });
   }
 
   const maxDay = new Date(year, month, 0).getDate();
-  const dayInt = parseInt(day, 10);
-  if (isNaN(dayInt) || dayInt <= 0 || dayInt > maxDay) {
-    return res
-      .status(400)
-      .json({ error: `Dia inválido para ${month}/${year}` });
+  const validDays = days
+    .map((d) => parseInt(d, 10))
+    .filter((d) => !isNaN(d) && d > 0 && d <= maxDay)
+    .map((d) => String(d).padStart(2, "0"));
+
+  if (validDays.length === 0) {
+    return res.status(400).json({
+      error: `Nenhum dia válido para ${month}/${year}.`,
+    });
   }
 
   const customer = await Customer.findByPk(customerId);
@@ -276,47 +280,46 @@ exports.addConsultationDay = async (req, res) => {
     where: { customer_id: customerId, month_and_year: monthYear },
   });
 
-  const consultationDays = billingRecord?.consultation_days
-    ? billingRecord.consultation_days.split(", ")
+  let existingDays = billingRecord?.consultation_days
+    ? billingRecord.consultation_days.split(", ").map((d) => d.trim())
     : [];
 
-  if (consultationDays.includes(day)) {
-    return res.status(400).json({ error: "Este dia já está registrado." });
-  }
-
-  consultationDays.push(day);
-  consultationDays.sort((a, b) => parseInt(a) - parseInt(b));
+  const allDays = [...new Set([...existingDays, ...validDays])].sort(
+    (a, b) => parseInt(a) - parseInt(b)
+  );
 
   if (billingRecord) {
     await billingRecord.update({
-      consultation_days: consultationDays.join(", "),
-      num_consultations: consultationDays.length,
+      consultation_days: allDays.join(", "),
+      num_consultations: allDays.length,
     });
   } else {
     await CustomersBillingRecords.create({
       customer_id: customerId,
       month_and_year: monthYear,
-      consultation_days: day,
-      num_consultations: 1,
+      consultation_days: allDays.join(", "),
+      num_consultations: allDays.length,
       consultation_fee: customer.consultation_fee || 0.0,
     });
   }
 
-  const formattedDate = `${monthYear}-${day.padStart(2, "0")}`;
-
-  await Event.create({
-    event_name: customer.customer_name,
-    date: formattedDate,
-    calendar_id: calendarId,
-    google_event_id: null,
-    status: "confirmed",
-    user_id: customer.user_id,
-    customer_id: customerId,
-  });
+  const newDaysOnly = validDays.filter((d) => !existingDays.includes(d));
+  for (const day of newDaysOnly) {
+    const formattedDate = `${monthYear}-${day}`;
+    await Event.create({
+      event_name: customer.customer_name,
+      date: formattedDate,
+      calendar_id: calendarId,
+      google_event_id: null,
+      status: "confirmed",
+      user_id: customer.user_id,
+      customer_id: customerId,
+    });
+  }
 
   return res.status(200).json({
-    message:
-      "Dia adicionado e evento registrado no banco de dados com sucesso.",
+    message: "Dias adicionados com sucesso.",
+    addedDays: newDaysOnly,
   });
 };
 
