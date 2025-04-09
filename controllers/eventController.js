@@ -284,7 +284,7 @@ exports.addConsultationDay = async (req, res) => {
     ? billingRecord.consultation_days.split(", ").map((d) => d.trim())
     : [];
 
-  const allDays = [...new Set([...existingDays, ...validDays])].sort(
+  const allDays = [...existingDays, ...validDays].sort(
     (a, b) => parseInt(a) - parseInt(b)
   );
 
@@ -297,15 +297,15 @@ exports.addConsultationDay = async (req, res) => {
     await CustomersBillingRecords.create({
       customer_id: customerId,
       month_and_year: monthYear,
-      consultation_days: allDays.join(", "),
-      num_consultations: allDays.length,
+      consultation_days: validDays.join(", "),
+      num_consultations: validDays.length,
       consultation_fee: customer.consultation_fee || 0.0,
     });
   }
 
-  const newDaysOnly = validDays.filter((d) => !existingDays.includes(d));
-  for (const day of newDaysOnly) {
+  for (const day of validDays) {
     const formattedDate = `${monthYear}-${day}`;
+
     await Event.create({
       event_name: customer.customer_name,
       date: formattedDate,
@@ -319,7 +319,7 @@ exports.addConsultationDay = async (req, res) => {
 
   return res.status(200).json({
     message: "Dias adicionados com sucesso.",
-    addedDays: newDaysOnly,
+    addedDays: validDays,
   });
 };
 
