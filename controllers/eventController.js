@@ -347,15 +347,35 @@ exports.removeConsultationDay = async (req, res) => {
     ? billingRecord.consultation_days.split(",").map((d) => d.trim())
     : [];
 
-  const daysToRemove = days.filter((day) => consultationDays.includes(day));
-
-  if (daysToRemove.length === 0) {
+  if (consultationDays.length === 0) {
     return res
       .status(400)
-      .json({ error: "Nenhum dos dias fornecidos está registrado." });
+      .json({ error: "Não há dias registrados para esse paciente." });
   }
 
-  consultationDays = consultationDays.filter((d) => !daysToRemove.includes(d));
+  for (const day of days) {
+    const qtdOriginal = consultationDays.filter((d) => d === day).length;
+
+    consultationDays.splice(consultationDays.indexOf(day), 1);
+
+    const qtdNew = consultationDays.filter((d) => d === day).length;
+
+    const qtdCancel = qtdOriginal - qtdNew;
+
+    for (let i = 0; i < qtdCancel; i++) {
+      const eventToCancel = await Event.findOne({
+        where: {
+          customer_id: customerId,
+          date: `${monthYear}-${day.padStart(2, "0")}`,
+          status: { [Op.not]: "cancelado" },
+        },
+      });
+
+      if (eventToCancel) {
+        await eventToCancel.update({ status: "cancelado" });
+      }
+    }
+  }
 
   await billingRecord.update({
     consultation_days:
@@ -363,22 +383,8 @@ exports.removeConsultationDay = async (req, res) => {
     num_consultations: consultationDays.length,
   });
 
-  await Event.update(
-    { status: "cancelado" },
-    {
-      where: {
-        customer_id: customerId,
-        date: {
-          [Op.in]: daysToRemove.map(
-            (day) => `${monthYear}-${day.padStart(2, "0")}`
-          ),
-        },
-        status: { [Op.not]: "cancelado" },
-      },
-    }
-  );
-
-  res
-    .status(200)
-    .json({ message: "Dias removidos e eventos cancelados com sucesso." });
+  return res.status(200).json({
+    message: "Dias removidos e eventos cancelados com sucesso.",
+    updatedDays: consultationDays,
+  });
 };
