@@ -284,9 +284,7 @@ exports.addConsultationDay = async (req, res) => {
     ? billingRecord.consultation_days.split(", ").map((d) => d.trim())
     : [];
 
-  const allDays = [...existingDays, ...validDays].sort(
-    (a, b) => parseInt(a) - parseInt(b)
-  );
+  const allDays = [...existingDays, ...validDays];
 
   if (billingRecord) {
     await billingRecord.update({
