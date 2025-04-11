@@ -236,12 +236,24 @@ exports.saveSelectedCalendars = async (req, res) => {
 };
 
 exports.addConsultationDay = async (req, res) => {
-  const { customerId, day, month, year } = req.body;
+  const { customerId, days, month, year } = req.body;
 
-  if (!customerId || !day || !month || !year) {
+  if (!customerId || !days || !Array.isArray(days) || !month || !year) {
     return res.status(400).json({
       error:
-        "Os campos 'customerId', 'day', 'month' e 'year' são obrigatórios.",
+        "Os campos 'customerId', 'days' (array), 'month' e 'year' são obrigatórios.",
+    });
+  }
+
+  const maxDay = new Date(year, month, 0).getDate();
+  const validDays = days
+    .map((d) => parseInt(d, 10))
+    .filter((d) => !isNaN(d) && d > 0 && d <= maxDay)
+    .map((d) => String(d).padStart(2, "0"));
+
+  if (validDays.length === 0) {
+    return res.status(400).json({
+      error: `Nenhum dia válido para ${month}/${year}.`,
     });
   }
 
@@ -268,47 +280,44 @@ exports.addConsultationDay = async (req, res) => {
     where: { customer_id: customerId, month_and_year: monthYear },
   });
 
-  const consultationDays = billingRecord?.consultation_days
-    ? billingRecord.consultation_days.split(", ")
+  let existingDays = billingRecord?.consultation_days
+    ? billingRecord.consultation_days.split(", ").map((d) => d.trim())
     : [];
 
-  if (consultationDays.includes(day)) {
-    return res.status(400).json({ error: "Este dia já está registrado." });
-  }
-
-  consultationDays.push(day);
-  consultationDays.sort((a, b) => a - b);
+  const allDays = [...existingDays, ...validDays];
 
   if (billingRecord) {
     await billingRecord.update({
-      consultation_days: consultationDays.join(", "),
-      num_consultations: consultationDays.length,
+      consultation_days: allDays.join(", "),
+      num_consultations: allDays.length,
     });
   } else {
     await CustomersBillingRecords.create({
       customer_id: customerId,
       month_and_year: monthYear,
-      consultation_days: day,
-      num_consultations: 1,
+      consultation_days: validDays.join(", "),
+      num_consultations: validDays.length,
       consultation_fee: customer.consultation_fee || 0.0,
     });
   }
 
-  const formattedDate = `${monthYear}-${day.padStart(2, "0")}`;
+  for (const day of validDays) {
+    const formattedDate = `${monthYear}-${day}`;
 
-  await Event.create({
-    event_name: customer.customer_name,
-    date: formattedDate,
-    calendar_id: calendarId,
-    google_event_id: null,
-    status: "confirmed",
-    user_id: customer.user_id,
-    customer_id: customerId,
-  });
+    await Event.create({
+      event_name: customer.customer_name,
+      date: formattedDate,
+      calendar_id: calendarId,
+      google_event_id: null,
+      status: "confirmed",
+      user_id: customer.user_id,
+      customer_id: customerId,
+    });
+  }
 
   return res.status(200).json({
-    message:
-      "Dia adicionado e evento registrado no banco de dados com sucesso.",
+    message: "Dias adicionados com sucesso.",
+    addedDays: validDays,
   });
 };
 
@@ -338,15 +347,35 @@ exports.removeConsultationDay = async (req, res) => {
     ? billingRecord.consultation_days.split(",").map((d) => d.trim())
     : [];
 
-  const daysToRemove = days.filter((day) => consultationDays.includes(day));
-
-  if (daysToRemove.length === 0) {
+  if (consultationDays.length === 0) {
     return res
       .status(400)
-      .json({ error: "Nenhum dos dias fornecidos está registrado." });
+      .json({ error: "Não há dias registrados para esse paciente." });
   }
 
-  consultationDays = consultationDays.filter((d) => !daysToRemove.includes(d));
+  for (const day of days) {
+    const qtdOriginal = consultationDays.filter((d) => d === day).length;
+
+    consultationDays.splice(consultationDays.indexOf(day), 1);
+
+    const qtdNew = consultationDays.filter((d) => d === day).length;
+
+    const qtdCancel = qtdOriginal - qtdNew;
+
+    for (let i = 0; i < qtdCancel; i++) {
+      const eventToCancel = await Event.findOne({
+        where: {
+          customer_id: customerId,
+          date: `${monthYear}-${day.padStart(2, "0")}`,
+          status: { [Op.not]: "cancelado" },
+        },
+      });
+
+      if (eventToCancel) {
+        await eventToCancel.update({ status: "cancelado" });
+      }
+    }
+  }
 
   await billingRecord.update({
     consultation_days:
@@ -354,22 +383,8 @@ exports.removeConsultationDay = async (req, res) => {
     num_consultations: consultationDays.length,
   });
 
-  await Event.update(
-    { status: "cancelado" },
-    {
-      where: {
-        customer_id: customerId,
-        date: {
-          [Op.in]: daysToRemove.map(
-            (day) => `${monthYear}-${day.padStart(2, "0")}`
-          ),
-        },
-        status: { [Op.not]: "cancelado" },
-      },
-    }
-  );
-
-  res
-    .status(200)
-    .json({ message: "Dias removidos e eventos cancelados com sucesso." });
+  return res.status(200).json({
+    message: "Dias removidos e eventos cancelados com sucesso.",
+    updatedDays: consultationDays,
+  });
 };

@@ -68,7 +68,7 @@ exports.sendWhatsAppMessage = async (req, res) => {
 
   const dynamicData = {
     nome: customer.customer_name,
-    mes: date.toLocaleString("pt-BR", { month: "long" }),
+    mês: date.toLocaleString("pt-BR", { month: "long" }),
     dias: formattedDays,
     valor_total: totalConsultationFee.replace(".", ","),
     clinic_name: user.clinic_name || "Consultório",
@@ -184,7 +184,7 @@ exports.sendEmailMessage = async (req, res) => {
 
   const dynamicData = {
     nome: customer.customer_name,
-    mes: date.toLocaleString("pt-BR", { month: "long" }),
+    mês: date.toLocaleString("pt-BR", { month: "long" }),
     dias: formattedDays,
     valor_total: totalConsultationFee.replace(".", ","),
     clinic_name: user.clinic_name || "Consultório",
