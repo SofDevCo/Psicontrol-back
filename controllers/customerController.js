@@ -1,4 +1,9 @@
-const { Customer, Event, CustomersBillingRecords } = require("../models");
+const {
+  Customer,
+  Event,
+  CustomersBillingRecords,
+  Calendar,
+} = require("../models");
 const Fuse = require("fuse.js");
 const {
   updateConsultationDays,
@@ -293,6 +298,68 @@ exports.editCustomer = async (req, res) => {
     return res
       .status(updateCustomer.status)
       .json({ error: updateCustomer.message });
+  }
+
+  const updatedCustomer = updateCustomer.customer;
+  const accessToken = user.access_token;
+
+  const calendars = await fetchGoogleCalendars(accessToken);
+  if (calendars.length === 0) {
+    return res.status(200).json(updateCustomer);
+  }
+
+  const calendarId = calendars[0].id;
+  const events = await fetchGoogleCalendarEvents(accessToken, calendarId);
+
+  const unmatchedEvents = await Event.findAll({
+    where: { customer_id: null, user_id: user.user_id },
+  });
+
+  const cleanCustomerName = updatedCustomer.customer_calendar_name
+    .replace(/^Paciente - /i, "")
+    .trim()
+    .toLowerCase();
+
+  const cleanUnmatchedEvents = unmatchedEvents.map((event) => ({
+    ...event,
+    event_name: event.event_name.replace(/^Paciente - /i, "").trim(),
+  }));
+
+  let matchedEvents = cleanUnmatchedEvents.filter(
+    (e) => e.event_name.toLowerCase() === cleanCustomerName
+  );
+
+  if (matchedEvents.length === 0) {
+    const fuse = new Fuse(cleanUnmatchedEvents, {
+      keys: ["event_name"],
+      threshold: 0.2,
+      distance: 100,
+      includeScore: true,
+      findAllMatches: true,
+    });
+
+    const result = fuse.search(cleanCustomerName);
+    const fuzzyMatches = result.filter((r) => r.score < 0.1).map((r) => r.item);
+
+    matchedEvents.push(...fuzzyMatches);
+  }
+
+  const eventIds = matchedEvents
+    .map((e) => e.dataValues?.google_event_id)
+    .filter((id) => id);
+
+  if (eventIds.length > 0) {
+    await Event.update(
+      { customer_id: updatedCustomer.customer_id },
+      {
+        where: {
+          google_event_id: { [Op.in]: eventIds },
+          user_id: user.user_id,
+        },
+      }
+    );
+
+    await updateConsultationDays(updatedCustomer.customer_id);
   }
 
   res.status(200).json(updateCustomer);
