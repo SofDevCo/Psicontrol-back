@@ -24,29 +24,30 @@ const fetchGoogleCalendarEvents = async (accessToken, calendarId) => {
   oauth2Client.setCredentials({ access_token: accessToken });
 
   const now = new Date();
-  const oneMonthBefore = new Date();
 
-  const lastDayOfNextMonth = getLastDayOfMonth(
+  const firstDayPreviousMonth = new Date(
     now.getFullYear(),
-    now.getMonth() + 1
+    now.getMonth() - 1,
+    1,
+    0,
+    0,
+    0,
+    0
   );
-
-  const oneMonthAfter = new Date(
+  const lastDayNextMonth = new Date(
     now.getFullYear(),
-    now.getMonth() + 1,
-    lastDayOfNextMonth,
+    now.getMonth() + 2,
+    0,
     23,
     59,
     59,
     999
   );
 
-  oneMonthBefore.setMonth(now.getMonth() - 1);
-
   const response = await calendar.events.list({
     calendarId: calendarId,
-    timeMin: oneMonthBefore.toISOString(),
-    timeMax: oneMonthAfter.toISOString(),
+    timeMin: firstDayPreviousMonth.toISOString(),
+    timeMax: lastDayNextMonth.toISOString(),
     singleEvents: true,
     orderBy: "startTime",
   });
