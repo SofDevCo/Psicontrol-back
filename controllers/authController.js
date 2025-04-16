@@ -276,12 +276,14 @@ const checkAndHandleCalendars = async (req, res) => {
   });
 
   if (!enabledCalendars || enabledCalendars.length === 0) {
-    return res.json({ redirect: "/select-calendar" });
+    return res.json({ hasCalendars: false });
   }
 
   const calendarIds = enabledCalendars.map((calendar) => calendar.calendar_id);
 
   return res.json({
+    hasCalendars: true,
+    calendarIds,
     redirect: `/create-event-form?calendarIds=${calendarIds.join(",")}`,
   });
 };
