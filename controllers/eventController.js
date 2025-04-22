@@ -210,29 +210,46 @@ exports.saveSelectedCalendars = async (req, res) => {
   if (!userId) {
     return res.status(400).json({ error: "ID do usuário não encontrado." });
   }
-
   if (!calendarId || calendarId === "undefined") {
     return res.status(400).json({ error: "ID do calendário inválido." });
   }
 
-  const calendar = await Calendar.findOne({
+  let calendar = await Calendar.findOne({
     where: { calendar_id: calendarId, user_id: userId },
   });
 
   if (calendar) {
     await calendar.update({ enabled: !!enabled, calendar_name });
+
+    if (enabled) {
+      oauth2Client.setCredentials({
+        access_token: req.user.access_token,
+        refresh_token: req.user.refresh_token,
+      });
+      await syncGoogleCalendarWithDatabase(req.user.access_token);
+    }
+
     return res
       .status(200)
-      .json({ message: "Calendário atualizado com sucesso!" });
-  } else {
-    await Calendar.create({
-      calendar_id: calendarId,
-      enabled: !!enabled,
-      calendar_name,
-      user_id: userId,
-    });
-    res.status(201).json({ message: "Calendário criado com sucesso!" });
+      .json({ message: "Calendário atualizado e sincronizado com sucesso!" });
   }
+
+  calendar = await Calendar.create({
+    calendar_id: calendarId,
+    enabled: !!enabled,
+    calendar_name,
+    user_id: userId,
+  });
+
+  if (enabled) {
+    oauth2Client.setCredentials({
+      access_token: req.user.access_token,
+      refresh_token: req.user.refresh_token,
+    });
+    await syncGoogleCalendarWithDatabase(req.user.access_token);
+  }
+
+  return res.status(201).json({ message: "Calendário criado e sincronizado!" });
 };
 
 exports.addConsultationDay = async (req, res) => {
