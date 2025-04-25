@@ -20,6 +20,59 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+exports.registerUser = async (req, res) => {
+  const { name, phone, occupation, crp, noCRP, email } = req.body;
+
+  console.log("Requisição recebida:", req.body);
+
+  if (!name || !phone || !occupation || occupation === "Selecionar") {
+    return res
+      .status(400)
+      .json({ error: "Todos os campos obrigatórios devem ser preenchidos." });
+  }
+
+  if (!noCRP && !crp) {
+    return res.status(400).json({ error: "CRP é obrigatório." });
+  }
+
+  if (noCRP && crp === null) {
+    return res.status(400).json({
+      error:
+        "Se você marcou 'Informar mais tarde', o campo CRP deve estar vazio.",
+    });
+  }
+
+  const formattedPhone = validatePhoneNumber(phone, "BR", "53");
+  if (!formattedPhone) {
+    return res.status(400).json({ error: "Número de telefone inválido." });
+  }
+
+  if (crp && !validateCRP(crp)) {
+    return res
+      .status(400)
+      .json({ error: "CRP inválido. O formato correto é XX/XXXXX." });
+  }
+
+  const newUser = await User.create({
+    user_name: name,
+    user_phone: formattedPhone,
+    occupation: occupation,
+    crp_number: crp || null,
+    user_email: email,
+  });
+
+  return res.status(201).json({
+    message: "Cliente registrado com sucesso.",
+    user: {
+      user_id: newUser.user_id,
+      user_name: newUser.user_name,
+      user_phone: newUser.user_phone,
+      occupation: newUser.occupation,
+      crp_number: newUser.crp_number,
+    },
+  });
+};
+
 exports.getUser = async (req, res) => {
   const userId = req.user.user_id;
 
