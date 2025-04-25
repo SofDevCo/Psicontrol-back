@@ -244,18 +244,17 @@ async function handleOAuth2Callback(req, res) {
     });
   }
 
-  await saveTokens(
-    data.name,
-    data.email,
-    tokens.access_token,
-    tokens.refresh_token
-  );
+  const newUser = await User.create({
+    user_name: data.name,
+    user_email: data.email,
+    access_token: tokens.access_token,
+    refresh_token: tokens.refresh_token,
+  });
 
   const authenticationToken = uuidv4();
-
-  const user = await User.findOne({ where: { user_email: data.email } });
-  user.autentication_token = authenticationToken;
-  await user.save();
+  
+  newUser.autentication_token = authenticationToken;
+  await newUser.save();
 
   await syncGoogleCalendarWithDatabase(tokens.access_token);
 
