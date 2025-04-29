@@ -226,7 +226,7 @@ async function initiateGoogleAuth(req, res) {
     ],
     state,
   });
-  return res.redirect(authUrl);
+  return res.json({ authUrl });
 }
 
 async function handleOAuth2Callback(req, res) {
