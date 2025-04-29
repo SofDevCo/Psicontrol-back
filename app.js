@@ -47,13 +47,12 @@ app.get("/", (req, res) => {
 
 //app.use("/webhook", healthcheckRoutes);
 
-app.get("/google", initiateGoogleAuth);
+app.get("/auth/google", initiateGoogleAuth);
 app.get("/oauth2callback", handleOAuth2Callback);
 app.use("/events", verifyToken, eventRoutes);
 app.use("/income", verifyToken, revenueRoutes);
 app.use("/dashboard", verifyToken, dashBoardRoutes);
 app.use("/user", verifyToken, userRoutes);
-app.get("/auth/google/callback", handleOAuth2Callback);
 require("./cronjob/cronJob");
 app.use("/message", verifyToken, messageRoutes);
 

@@ -215,52 +215,66 @@ const deleteNonexistentGoogleEvents = async (events, calendarId, userId) => {
   }
 };
 
-const initiateGoogleAuth = (req, res) => {
-  res.json({ authUrl });
-};
+async function initiateGoogleAuth(req, res) {
+  const { state } = req.query;
+  const authUrl = oauth2Client.generateAuthUrl({
+    access_type: "offline",
+    scope: [
+      "https://www.googleapis.com/auth/calendar.readonly",
+      "https://www.googleapis.com/auth/userinfo.profile",
+      "https://www.googleapis.com/auth/userinfo.email",
+    ],
+    state,
+  });
+  return res.json({ authUrl });
+}
 
 async function handleOAuth2Callback(req, res) {
-  const { code } = req.query;
+  const { code, state } = req.query;
+
   if (!code) {
     return res.status(400).send("Código de autorização ausente.");
   }
 
   const { tokens } = await oauth2Client.getToken(code);
-  oauth2Client.setCredentials({ access_token: tokens.access_token });
+  oauth2Client.setCredentials(tokens);
 
-  const calendars = await listCalendars();
+  const formData = JSON.parse(decodeURIComponent(state || "{}"));
+  const { name, phone, occupation, crp, noCRP } = formData;
 
   let oauth2 = google.oauth2({
     auth: oauth2Client,
     version: "v2",
   });
-
   const { data } = await oauth2.userinfo.get();
 
   if (!data.email) {
-    return res.status(400).json({
-      statusCode: 400,
-      message: "Email não encontrado.",
-    });
+    return res.status(400).json({ message: "Email não encontrado." });
   }
 
-  await saveTokens(
-    data.name,
-    data.email,
-    tokens.access_token,
-    tokens.refresh_token
-  );
+  let user = await User.findOne({ where: { user_email: data.email } });
 
-  const authenticationToken = uuidv4();
+  if (!user) {
+    user = await User.create({
+      user_name: name || data.name,
+      user_email: data.email,
+      user_phone: phone || null,
+      occupation: occupation || "Estudante",
+      crp_number: !noCRP && crp ? crp : null,
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+    });
+  } else {
+    user.access_token = tokens.access_token;
+    user.refresh_token = tokens.refresh_token;
+  }
 
-  const user = await User.findOne({ where: { user_email: data.email } });
-  user.autentication_token = authenticationToken;
+  user.autentication_token = uuidv4();
   await user.save();
 
   await syncGoogleCalendarWithDatabase(tokens.access_token);
-
   res.redirect(
-    `${process.env.FRONTEND_URL}/token?token=${authenticationToken}`
+    `${process.env.FRONTEND_URL}/token?token=${user.autentication_token}`
   );
 }
 

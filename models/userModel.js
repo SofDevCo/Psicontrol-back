@@ -36,7 +36,7 @@ const User = sequelize.define(
     },
     user_email: {
       type: DataTypes.STRING(255),
-      allowNull: false,
+      allowNull: true,
     },
     access_token: {
       type: DataTypes.STRING(255),
@@ -70,6 +70,25 @@ const User = sequelize.define(
     },
     image: {
       type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    registration_date: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    occupation: {
+      type: DataTypes.ENUM(
+        "Psicólogo(a)",
+        "Psiquiatra",
+        "Administro uma clínica/consultório",
+        "Estudante",
+        "Outro Profissional da Saúde"
+      ),
+      allowNull: false,
+    },
+    current_plan: {
+      type: DataTypes.STRING(100),
       allowNull: true,
     },
   },
