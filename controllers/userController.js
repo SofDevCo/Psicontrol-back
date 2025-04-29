@@ -23,22 +23,24 @@ const upload = multer({ storage });
 exports.registerUser = async (req, res) => {
   const { name, phone, occupation, crp, noCRP, email } = req.body;
 
-  console.log("Requisição recebida:", req.body);
+  if (!email || !validateEmail(email).isValid) {
+    return res
+      .status(400)
+      .json({ error: "E-mail é obrigatório e deve ser válido." });
+  }
 
   if (!name || !phone || !occupation || occupation === "Selecionar") {
     return res
       .status(400)
       .json({ error: "Todos os campos obrigatórios devem ser preenchidos." });
   }
-
   if (!noCRP && !crp) {
     return res.status(400).json({ error: "CRP é obrigatório." });
   }
-
-  if (noCRP && crp === null) {
+  if (noCRP && crp) {
     return res.status(400).json({
       error:
-        "Se você marcou 'Informar mais tarde', o campo CRP deve estar vazio.",
+        "Se marcou 'Informar mais tarde', o campo CRP deve ficar em branco.",
     });
   }
 
@@ -46,21 +48,39 @@ exports.registerUser = async (req, res) => {
   if (!formattedPhone) {
     return res.status(400).json({ error: "Número de telefone inválido." });
   }
-
   if (crp && !validateCRP(crp)) {
     return res
       .status(400)
-      .json({ error: "CRP inválido. O formato correto é XX/XXXXX." });
+      .json({ error: "CRP inválido. Formato correto: XX/XXXXX." });
+  }
+
+  let user = await User.findOne({ where: { user_email: email } });
+  if (user) {
+    await user.update({
+      user_name: name,
+      user_phone: formattedPhone,
+      occupation,
+      crp_number: crp || null,
+    });
+    return res.status(200).json({
+      message: "Usuário atualizado com sucesso.",
+      user: {
+        user_id: user.user_id,
+        user_name: user.user_name,
+        user_phone: user.user_phone,
+        occupation: user.occupation,
+        crp_number: user.crp_number,
+      },
+    });
   }
 
   const newUser = await User.create({
     user_name: name,
     user_phone: formattedPhone,
-    occupation: occupation,
+    occupation,
     crp_number: crp || null,
     user_email: email,
   });
-
   return res.status(201).json({
     message: "Cliente registrado com sucesso.",
     user: {
