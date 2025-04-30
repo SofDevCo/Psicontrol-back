@@ -54,6 +54,11 @@ exports.sendWhatsAppMessage = async (req, res) => {
     consultationDays = consultationDays.concat(days);
   });
 
+  consultationDays = consultationDays
+    .map(Number)
+    .sort((a, b) => a - b)
+    .map((day) => day.toString().padStart(2, "0"));
+
   const totalConsultationFee = (totalConsultations * consultationFee).toFixed(
     2
   );
@@ -169,6 +174,11 @@ exports.sendEmailMessage = async (req, res) => {
     totalConsultations += days.length;
     consultationDays = consultationDays.concat(days);
   });
+
+  consultationDays = consultationDays
+    .map(Number)
+    .sort((a, b) => a - b)
+    .map((day) => day.toString().padStart(2, "0"));
 
   const totalConsultationFee = (totalConsultations * consultationFee).toFixed(
     2
