@@ -20,7 +20,14 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 const corsOptions = {
-  origin: "*",
+  origin: [
+    process.env.FRONTEND_URL,
+    "https://app.psicontrol.com.br/",
+    "http://localhost:3001/",
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: true,
+  allowedHeaders: ["Content-Type", "Authorization", "Origin"],
 };
 
 app.use(cors(corsOptions));
