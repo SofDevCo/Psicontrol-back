@@ -253,6 +253,15 @@ async function handleOAuth2Callback(req, res) {
     return res.status(400).json({ message: "Email não encontrado." });
   }
 
+  const existingUser = await User.findOne({
+    where: { user_email: data.email },
+  });
+  if (existingUser) {
+    return res.redirect(
+      `${process.env.LANDINGPAGE_URL}/register?error=email_exists`
+    );
+  }
+
   let user = await User.findOne({ where: { user_email: data.email } });
 
   if (!user) {
