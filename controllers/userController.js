@@ -46,14 +46,14 @@ exports.editUser = [
   upload.single("image"),
   async (req, res) => {
     const userId = req.user.user_id;
-    let {
-      user_cpf,
-      user_cnpj,
+    const {
+      user_cpf: rawCpf,
+      user_cnpj: rawCnpj,
       crp_number,
       user_phone,
       user_message,
       clinic_name,
-      user_email,
+      user_email: rawEmail,
     } = req.body;
     const imagePath = req.file ? req.file.filename : null;
 
@@ -62,11 +62,19 @@ exports.editUser = [
       return res.status(404).json({ error: "Usuário não encontrado." });
     }
 
-    if (user_cpf && !validateCPFOrCNPJ(user_cpf)) {
-      return res.status(400).json({ error: "CPF inválido." });
+    const cleanCpf = rawCpf ? rawCpf.replace(/\D/g, "") : null;
+    const cleanCnpj = rawCnpj ? rawCnpj.replace(/\D/g, "") : null;
+
+    if (cleanCpf && cleanCpf.length !== 11) {
+      return res
+        .status(400)
+        .json({ error: "CPF inválido. Deve ter 11 dígitos." });
     }
-    if (user_cnpj && !validateCPFOrCNPJ(user_cnpj)) {
-      return res.status(400).json({ error: "CNPJ inválido." });
+
+    if (cleanCnpj && cleanCnpj.length !== 14) {
+      return res
+        .status(400)
+        .json({ error: "CNPJ inválido. Deve ter 14 dígitos." });
     }
 
     if (crp_number && !validateCRP(crp_number)) {
@@ -82,25 +90,24 @@ exports.editUser = [
       return res.status(400).json({ error: "Número de telefone inválido." });
     }
 
+    let user_email = rawEmail;
     if (user_email) {
       const emailValidation = validateEmail(user_email);
-
       if (!emailValidation || !emailValidation.isValid) {
         return res.status(400).json({ error: "E-mail inválido." });
       }
-
       user_email = emailValidation.formatted || user_email;
     }
 
     await user.update({
-      user_cpf: user_cpf || user.user_cpf,
-      user_cnpj: user_cnpj || user.user_cnpj,
-      crp_number: crp_number || user.crp_number,
-      user_phone: formattedPhone || user.user_phone,
-      user_email: user_email || user.user_email,
-      user_message: user_message || user.user_message,
-      clinic_name: clinic_name || user.clinic_name,
-      image: imagePath || user.image,
+      user_cpf: cleanCpf, // remove fallback para forçar atualização/remoção
+      user_cnpj: cleanCnpj, // idem
+      crp_number: crp_number ?? user.crp_number,
+      user_phone: formattedPhone ?? user.user_phone,
+      user_email: user_email ?? user.user_email,
+      user_message,
+      clinic_name,
+      image: imagePath ?? user.image,
     });
 
     res.status(200).json({
