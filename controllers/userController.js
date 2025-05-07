@@ -100,8 +100,8 @@ exports.editUser = [
     }
 
     await user.update({
-      user_cpf: cleanCpf, // remove fallback para forçar atualização/remoção
-      user_cnpj: cleanCnpj, // idem
+      user_cpf: cleanCpf, 
+      user_cnpj: cleanCnpj, 
       crp_number: crp_number ?? user.crp_number,
       user_phone: formattedPhone ?? user.user_phone,
       user_email: user_email ?? user.user_email,
