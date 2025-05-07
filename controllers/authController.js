@@ -241,7 +241,7 @@ async function handleOAuth2Callback(req, res) {
   oauth2Client.setCredentials(tokens);
 
   const formData = JSON.parse(decodeURIComponent(state || "{}"));
-  const { name, phone, occupation, crp, noCRP } = formData;
+  const { name, phone, occupation, crp, noCRP, action } = formData;
 
   let oauth2 = google.oauth2({
     auth: oauth2Client,
@@ -255,7 +255,12 @@ async function handleOAuth2Callback(req, res) {
 
   let user = await User.findOne({ where: { user_email: data.email } });
 
-  if (!user) {
+  if (action === "register") {
+    if (user) {
+      return res.redirect(
+        `${process.env.LANDINGPAGE_URL}/register?error=email_exists`
+      );
+    }
     user = await User.create({
       user_name: name || data.name,
       user_email: data.email,
@@ -266,6 +271,12 @@ async function handleOAuth2Callback(req, res) {
       refresh_token: tokens.refresh_token,
     });
   } else {
+    if (!user) {
+      return res.redirect(
+        `${process.env.LANDINGPAGE_URL}/login?error=user_not_found`
+      );
+    }
+    // apenas atualiza tokens
     user.access_token = tokens.access_token;
     user.refresh_token = tokens.refresh_token;
   }
