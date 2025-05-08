@@ -17,7 +17,7 @@ const {
 } = require("./controllers/authController");
 const { verifyToken } = require("./middleware/authMiddleware");
 const app = express();
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
 const corsOptions = {
   origin: [
@@ -63,6 +63,6 @@ app.use("/user", verifyToken, userRoutes);
 require("./cronjob/cronJob");
 app.use("/message", verifyToken, messageRoutes);
 
-app.listen(port, () => {
-  console.log(`Servidor rodando em http://localhost:${port}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
