@@ -142,3 +142,30 @@ exports.addPaymentMethod = async (req, res) => {
 
   return res.status(200).json({ payment_method: methods });
 };
+
+exports.removePaymentMethod = async (req, res) => {
+  const userId = req.user.user_id;
+  const { method } = req.params;
+
+  if (!method) {
+    return res.status(400).json({ error: "Método não informado" });
+  }
+
+  const user = await User.findByPk(userId);
+  if (!user) {
+    return res.status(404).json({ error: "Usuário não encontrado" });
+  }
+
+  const methods = user.payment_method ? JSON.parse(user.payment_method) : [];
+
+  const filtered = methods.filter((m) => m !== method);
+
+  if (filtered.length === methods.length) {
+    return res.status(404).json({ error: "Método não encontrado." });
+  }
+
+  user.payment_method = JSON.stringify(filtered);
+  await user.save();
+
+  return res.status(200).json({ payment_method: filtered });
+};
