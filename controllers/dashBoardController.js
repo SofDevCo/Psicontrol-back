@@ -254,7 +254,7 @@ exports.Partialpayment = async (req, res) => {
     .json({ message: "Pagamento parcial atualizado com sucesso." });
 };
 
-exports.confirmPayment = async (req, res) => {
+exports.savePayment = async (req, res) => {
   const {
     customer_id,
     month_and_year,
@@ -270,31 +270,45 @@ exports.confirmPayment = async (req, res) => {
   const billingRecord = await CustomersBillingRecords.findOne({
     where: { customer_id, month_and_year },
   });
-
   if (!billingRecord) {
     return res.status(404).json({ error: "Registro não encontrado." });
   }
 
+  const daysArray = billingRecord.consultation_days
+    ? billingRecord.consultation_days
+        .split(",")
+        .map((d) => d.trim())
+        .filter(Boolean)
+    : [];
+  const numConsultations = daysArray.length;
+
+  // 2) calcula total_consultation_fee
+  const totalFee =
+    parseFloat(billingRecord.consultation_fee) * numConsultations;
+
   const isPartial = payment_amount !== undefined;
   const amountToSave = isPartial
     ? parseFloat(payment_amount).toFixed(2)
-    : billingRecord.total_consultation_fee;
+    : totalFee.toFixed(2);
   const status = isPartial ? "parcial" : "pago";
 
-  await CustomersBillingRecords.update(
-    {
-      payment_amount: amountToSave,
-      payment_date,
-      payment_method,
-      was_charged: true,
-      payment_status: status,
-    },
-    { where: { customer_id, month_and_year } }
-  );
+  const updateData = {
+    payment_amount: amountToSave,
+    payment_date,
+    payment_method,
+    was_charged: true,
+    payment_status: status,
+  };
+  if (!isPartial) {
+    updateData.total_consultation_fee = totalFee.toFixed(2);
+  }
+
+  await billingRecord.update(updateData);
 
   const updated = await CustomersBillingRecords.findOne({
     where: { customer_id, month_and_year },
     attributes: [
+      "total_consultation_fee",
       "payment_amount",
       "payment_date",
       "payment_method",
