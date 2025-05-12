@@ -224,36 +224,6 @@ exports.revertBillOfSale = async (req, res) => {
   }
 };
 
-exports.Partialpayment = async (req, res) => {
-  const { customer_id, month_and_year, payment_amount } = req.body;
-
-  if (!customer_id || !month_and_year || payment_amount === undefined) {
-    return res.status(400).json({ error: "Dados incompletos." });
-  }
-
-  const billingRecord = await CustomersBillingRecords.findOne({
-    where: { customer_id, month_and_year },
-  });
-
-  if (!billingRecord) {
-    return res.status(404).json({ error: "Registro não encontrado." });
-  }
-
-  await CustomersBillingRecords.update(
-    {
-      payment_amount: parseFloat(payment_amount).toFixed(2),
-      payment_status: "parcial",
-    },
-    {
-      where: { customer_id, month_and_year },
-    }
-  );
-
-  res
-    .status(200)
-    .json({ message: "Pagamento parcial atualizado com sucesso." });
-};
-
 exports.savePayment = async (req, res) => {
   const {
     customer_id,
