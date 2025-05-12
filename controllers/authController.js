@@ -276,7 +276,6 @@ async function handleOAuth2Callback(req, res) {
         `${process.env.LANDINGPAGE_URL}/login?error=user_not_found`
       );
     }
-    // apenas atualiza tokens
     user.access_token = tokens.access_token;
     user.refresh_token = tokens.refresh_token;
   }
