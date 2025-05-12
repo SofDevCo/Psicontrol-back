@@ -46,7 +46,7 @@ const CustomersBillingRecords = sequelize.define(
       type: DataTypes.DATEONLY,
       allowNull: true,
     },
-    payment_bank: {
+    payment_method: {
       type: DataTypes.STRING(255),
       allowNull: true,
     },

@@ -100,8 +100,8 @@ exports.editUser = [
     }
 
     await user.update({
-      user_cpf: cleanCpf, 
-      user_cnpj: cleanCnpj, 
+      user_cpf: cleanCpf,
+      user_cnpj: cleanCnpj,
       crp_number: crp_number ?? user.crp_number,
       user_phone: formattedPhone ?? user.user_phone,
       user_email: user_email ?? user.user_email,
@@ -116,3 +116,56 @@ exports.editUser = [
     });
   },
 ];
+
+exports.addPaymentMethod = async (req, res) => {
+  const userId = req.user.user_id;
+  const { method } = req.body;
+
+  if (!method) {
+    return res.status(400).json({ error: "Método não informado." });
+  }
+
+  const user = await User.findByPk(userId);
+  if (!user) {
+    return res.status(404).json({ error: "Usuário não encontrado." });
+  }
+
+  const methods = user.payment_method ? JSON.parse(user.payment_method) : [];
+
+  if (methods.includes(method)) {
+    return res.status(400).json({ error: "Método já existe." });
+  }
+
+  methods.push(method);
+  user.payment_method = JSON.stringify(methods);
+  await user.save();
+
+  return res.status(200).json({ payment_method: methods });
+};
+
+exports.removePaymentMethod = async (req, res) => {
+  const userId = req.user.user_id;
+  const { method } = req.params;
+
+  if (!method) {
+    return res.status(400).json({ error: "Método não informado" });
+  }
+
+  const user = await User.findByPk(userId);
+  if (!user) {
+    return res.status(404).json({ error: "Usuário não encontrado" });
+  }
+
+  const methods = user.payment_method ? JSON.parse(user.payment_method) : [];
+
+  const filtered = methods.filter((m) => m !== method);
+
+  if (filtered.length === methods.length) {
+    return res.status(404).json({ error: "Método não encontrado." });
+  }
+
+  user.payment_method = JSON.stringify(filtered);
+  await user.save();
+
+  return res.status(200).json({ payment_method: filtered });
+};

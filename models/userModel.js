@@ -87,6 +87,10 @@ const User = sequelize.define(
       ),
       allowNull: false,
     },
+    payment_method: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
     current_plan: {
       type: DataTypes.STRING(100),
       allowNull: true,
