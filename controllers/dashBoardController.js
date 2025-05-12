@@ -281,16 +281,32 @@ exports.savePayment = async (req, res) => {
         .filter(Boolean)
     : [];
   const numConsultations = daysArray.length;
-
-  // 2) calcula total_consultation_fee
   const totalFee =
     parseFloat(billingRecord.consultation_fee) * numConsultations;
 
-  const isPartial = payment_amount !== undefined;
-  const amountToSave = isPartial
-    ? parseFloat(payment_amount).toFixed(2)
-    : totalFee.toFixed(2);
-  const status = isPartial ? "parcial" : "pago";
+  const hasPartial = payment_amount !== undefined;
+  let amountToSave, status;
+
+  if (hasPartial) {
+    const parsed = parseFloat(payment_amount);
+
+    if (parsed > totalFee) {
+      return res.status(400).json({
+        error: "Valor de pagamento parcial não pode exceder o total devido.",
+      });
+    }
+
+    if (parsed === totalFee) {
+      amountToSave = parsed.toFixed(2);
+      status = "pago";
+    } else {
+      amountToSave = parsed.toFixed(2);
+      status = "parcial";
+    }
+  } else {
+    amountToSave = totalFee.toFixed(2);
+    status = "pago";
+  }
 
   const updateData = {
     payment_amount: amountToSave,
@@ -299,7 +315,7 @@ exports.savePayment = async (req, res) => {
     was_charged: true,
     payment_status: status,
   };
-  if (!isPartial) {
+  if (!hasPartial || status === "pago") {
     updateData.total_consultation_fee = totalFee.toFixed(2);
   }
 
