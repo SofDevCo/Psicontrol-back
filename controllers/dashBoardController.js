@@ -69,9 +69,9 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
     const activeDays = activeDaysByCustomer[record.customer_id] || new Set();
     const filteredDays = record.consultation_days
       ? record.consultation_days
-        .split(",")
-        .map((day) => day.trim())
-        .filter((day) => activeDays.has(day))
+          .split(",")
+          .map((day) => day.trim())
+          .filter((day) => activeDays.has(day))
       : [];
 
     return {
@@ -159,10 +159,10 @@ exports.revertSendingInvoice = async (req, res) => {
   try {
     await CustomersBillingRecords.update(
       {
-        sending_invoice: false
+        sending_invoice: false,
       },
       {
-        where: { customer_id, month_and_year }
+        where: { customer_id, month_and_year },
       }
     );
 
@@ -184,16 +184,20 @@ exports.revertPaymentConfirmation = async (req, res) => {
       {
         was_charged: false,
         payment_status: "",
-        payment_amount: null
+        payment_amount: null,
       },
       {
-        where: { customer_id, month_and_year }
+        where: { customer_id, month_and_year },
       }
     );
 
-    res.status(200).json({ message: "Confirmação de pagamento revertida com sucesso." });
+    res
+      .status(200)
+      .json({ message: "Confirmação de pagamento revertida com sucesso." });
   } catch (error) {
-    res.status(500).json({ error: "Erro ao reverter confirmação de pagamento." });
+    res
+      .status(500)
+      .json({ error: "Erro ao reverter confirmação de pagamento." });
   }
 };
 
@@ -207,10 +211,10 @@ exports.revertBillOfSale = async (req, res) => {
   try {
     await CustomersBillingRecords.update(
       {
-        bill_of_sale: false
+        bill_of_sale: false,
       },
       {
-        where: { customer_id, month_and_year }
+        where: { customer_id, month_and_year },
       }
     );
 
@@ -251,22 +255,57 @@ exports.Partialpayment = async (req, res) => {
 };
 
 exports.confirmPayment = async (req, res) => {
-  const { customer_id, month_and_year } = req.body;
+  const {
+    customer_id,
+    month_and_year,
+    payment_date,
+    payment_method,
+    payment_amount,
+  } = req.body;
 
-  if (!customer_id || !month_and_year) {
+  if (!customer_id || !month_and_year || !payment_date || !payment_method) {
     return res.status(400).json({ error: "Dados incompletos." });
   }
+
+  const billingRecord = await CustomersBillingRecords.findOne({
+    where: { customer_id, month_and_year },
+  });
+
+  if (!billingRecord) {
+    return res.status(404).json({ error: "Registro não encontrado." });
+  }
+
+  const isPartial = payment_amount !== undefined;
+  const amountToSave = isPartial
+    ? parseFloat(payment_amount).toFixed(2)
+    : billingRecord.total_consultation_fee;
+  const status = isPartial ? "parcial" : "pago";
+
   await CustomersBillingRecords.update(
     {
+      payment_amount: amountToSave,
+      payment_date,
+      payment_method,
       was_charged: true,
-      payment_status: "pago",
+      payment_status: status,
     },
-    {
-      where: { customer_id, month_and_year },
-    }
+    { where: { customer_id, month_and_year } }
   );
 
-  res.status(200).json({ message: "Pagamento confirmado com sucesso." });
+  const updated = await CustomersBillingRecords.findOne({
+    where: { customer_id, month_and_year },
+    attributes: [
+      "payment_amount",
+      "payment_date",
+      "payment_method",
+      "payment_status",
+    ],
+  });
+
+  return res.status(200).json({
+    message: "Pagamento registrado com sucesso.",
+    ...updated.get({ plain: true }),
+  });
 };
 
 exports.confirmBillOfSale = async (req, res) => {
