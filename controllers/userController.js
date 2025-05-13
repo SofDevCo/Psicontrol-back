@@ -38,6 +38,7 @@ exports.getUser = async (req, res) => {
     user_email: user.user_email,
     user_message: user.user_message,
     clinic_name: user.clinic_name,
+    payment_method: user.payment_method,
     image: user.image ? `/uploads/${user.image}` : null,
   });
 };
