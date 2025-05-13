@@ -3,6 +3,7 @@ const {
   CustomersBillingRecords,
   income,
   Event,
+  User,
 } = require("../models");
 const { Op } = require("sequelize");
 
@@ -315,13 +316,58 @@ exports.confirmBillOfSale = async (req, res) => {
     return res.status(400).json({ error: "Dados incompletos." });
   }
 
-  await CustomersBillingRecords.update(
-    {
-      bill_of_sale: true,
-    },
-    {
-      where: { customer_id, month_and_year },
-    }
+  const [updatedRows] = await CustomersBillingRecords.update(
+    { bill_of_sale: true },
+    { where: { customer_id, month_and_year } }
   );
-  res.status(200).json({ message: "Nota fiscal enviada com sucesso!" });
+  if (!updatedRows) {
+    return res.status(404).json({ error: "Registro não encontrado." });
+  }
+
+  const record = await CustomersBillingRecords.findOne({
+    where: { customer_id, month_and_year },
+    attributes: ["payment_date", "bill_of_sale", "total_consultation_fee"],
+    include: [
+      {
+        model: Customer,
+        attributes: ["customer_name", "customer_cpf_cnpj"],
+        include: [
+          {
+            model: User,
+            attributes: ["user_name", "user_cpf"],
+          },
+        ],
+      },
+    ],
+  });
+
+  if (!record) {
+    return res
+      .status(404)
+      .json({ error: "Não foi possível carregar os dados." });
+  }
+
+  const {
+    payment_amount,
+    payment_date,
+    bill_of_sale,
+    Customer: {
+      customer_name: payer_name,
+      customer_cpf_cnpj: payer_cpf,
+      User: { user_cpf: beneficiary_cpf, user_name: beneficiary_name },
+    },
+  } = record;
+
+  return res.status(200).json({
+    message: "Recibo emitido com sucesso!",
+    data: {
+      payer_name,
+      payer_cpf,
+      beneficiary_name,
+      beneficiary_cpf,
+      payment_amount,
+      payment_date,
+      bill_of_sale,
+    },
+  });
 };
