@@ -229,10 +229,9 @@ exports.createCustomer = async (req, res) => {
   if (calendars.length === 0) {
     return res.status(400).json({ error: "Nenhum calendário encontrado." });
   }
-
   const calendarId = calendars[0].id;
+  await fetchGoogleCalendarEvents(accessToken, calendarId);
 
-  const events = await fetchGoogleCalendarEvents(accessToken, calendarId);
   const unmatchedEvents = await Event.findAll({
     where: { customer_id: null, user_id: user.user_id },
   });
@@ -250,7 +249,6 @@ exports.createCustomer = async (req, res) => {
   let matchedEvents = cleanUnmatchedEvents.filter(
     (e) => e.event_name.toLowerCase() === cleanCustomerName
   );
-
   if (matchedEvents.length === 0) {
     const fuse = new Fuse(cleanUnmatchedEvents, {
       keys: ["event_name"],
@@ -259,10 +257,8 @@ exports.createCustomer = async (req, res) => {
       includeScore: true,
       findAllMatches: true,
     });
-
     const result = fuse.search(cleanCustomerName);
     const fuzzyMatches = result.filter((r) => r.score < 0.1).map((r) => r.item);
-
     matchedEvents.push(...fuzzyMatches);
   }
 
@@ -275,16 +271,40 @@ exports.createCustomer = async (req, res) => {
       { customer_id: createdCustomer.customer_id },
       {
         where: {
-          google_event_id: { [Op.in]: eventIds },
           user_id: user.user_id,
+          google_event_id: { [Op.in]: eventIds },
         },
       }
     );
-
-    await updateConsultationDays(createdCustomer.customer_id);
   }
 
-  res.status(201).json(newCustomer);
+  await updateConsultationDays(createdCustomer.customer_id);
+
+  const billingRecords = await CustomersBillingRecords.findAll({
+    where: { customer_id: createdCustomer.customer_id },
+    attributes: [
+      "id",
+      "month_and_year",
+      "consultation_days",
+      "consultation_fee",
+    ],
+  });
+
+  for (const billingRecord of billingRecords) {
+    const daysCount = billingRecord.consultation_days
+      ? billingRecord.consultation_days
+          .split(",")
+          .map((d) => d.trim())
+          .filter((d) => d).length
+      : 0;
+
+    const unitFee = parseFloat(billingRecord.consultation_fee) || 0;
+    const totalFee = (daysCount * unitFee).toFixed(2);
+
+    await billingRecord.update({ total_consultation_fee: totalFee });
+  }
+
+  return res.status(201).json(newCustomer);
 };
 
 exports.editCustomer = async (req, res) => {
