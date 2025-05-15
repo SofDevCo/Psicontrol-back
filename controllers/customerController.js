@@ -229,10 +229,9 @@ exports.createCustomer = async (req, res) => {
   if (calendars.length === 0) {
     return res.status(400).json({ error: "Nenhum calendário encontrado." });
   }
-
   const calendarId = calendars[0].id;
+  await fetchGoogleCalendarEvents(accessToken, calendarId);
 
-  const events = await fetchGoogleCalendarEvents(accessToken, calendarId);
   const unmatchedEvents = await Event.findAll({
     where: { customer_id: null, user_id: user.user_id },
   });
@@ -250,7 +249,6 @@ exports.createCustomer = async (req, res) => {
   let matchedEvents = cleanUnmatchedEvents.filter(
     (e) => e.event_name.toLowerCase() === cleanCustomerName
   );
-
   if (matchedEvents.length === 0) {
     const fuse = new Fuse(cleanUnmatchedEvents, {
       keys: ["event_name"],
@@ -259,10 +257,8 @@ exports.createCustomer = async (req, res) => {
       includeScore: true,
       findAllMatches: true,
     });
-
     const result = fuse.search(cleanCustomerName);
     const fuzzyMatches = result.filter((r) => r.score < 0.1).map((r) => r.item);
-
     matchedEvents.push(...fuzzyMatches);
   }
 
@@ -275,16 +271,40 @@ exports.createCustomer = async (req, res) => {
       { customer_id: createdCustomer.customer_id },
       {
         where: {
-          google_event_id: { [Op.in]: eventIds },
           user_id: user.user_id,
+          google_event_id: { [Op.in]: eventIds },
         },
       }
     );
-
-    await updateConsultationDays(createdCustomer.customer_id);
   }
 
-  res.status(201).json(newCustomer);
+  await updateConsultationDays(createdCustomer.customer_id);
+
+  const billingRecords = await CustomersBillingRecords.findAll({
+    where: { customer_id: createdCustomer.customer_id },
+    attributes: [
+      "id",
+      "month_and_year",
+      "consultation_days",
+      "consultation_fee",
+    ],
+  });
+
+  for (const billingRecord of billingRecords) {
+    const daysCount = billingRecord.consultation_days
+      ? billingRecord.consultation_days
+          .split(",")
+          .map((d) => d.trim())
+          .filter((d) => d).length
+      : 0;
+
+    const unitFee = parseFloat(billingRecord.consultation_fee) || 0;
+    const totalFee = (daysCount * unitFee).toFixed(2);
+
+    await billingRecord.update({ total_consultation_fee: totalFee });
+  }
+
+  return res.status(201).json(newCustomer);
 };
 
 exports.editCustomer = async (req, res) => {
@@ -446,6 +466,7 @@ exports.getProfileCustomer = async (req, res) => {
         attributes: [
           "consultation_days",
           "consultation_fee",
+          "total_consultation_fee",
           "month_and_year",
           "sending_invoice",
           "payment_status",
@@ -460,9 +481,8 @@ exports.getProfileCustomer = async (req, res) => {
     return res.status(404).json({ error: "Cliente não encontrado." });
   }
 
-  const age = calculateAge(customer.customer_dob);
-
   const customerData = customer.toJSON();
+  const age = calculateAge(customerData.customer_dob);
 
   customerData.customer_personal_message =
     customerData.customer_personal_message
@@ -477,12 +497,11 @@ exports.getProfileCustomer = async (req, res) => {
 
   const activeEvents = await Event.findAll({
     where: {
-      customer_id: customer.customer_id,
+      customer_id: customerData.customer_id,
       status: { [Op.not]: "cancelado" },
     },
     attributes: ["date"],
   });
-
   const activeDays = new Set(
     activeEvents.map((event) => event.date.split("-")[2])
   );
@@ -490,13 +509,18 @@ exports.getProfileCustomer = async (req, res) => {
   const groupedBilling = {};
 
   customerData.CustomersBillingRecords.forEach((record) => {
-    const { month_and_year, consultation_days, consultation_fee } = record;
+    const {
+      month_and_year,
+      consultation_days,
+      consultation_fee,
+      total_consultation_fee,
+    } = record;
 
     if (!groupedBilling[month_and_year]) {
       groupedBilling[month_and_year] = {
         month: month_and_year,
         num_consultations: 0,
-        total_consultation_fee: 0,
+        total_consultation_fee: parseFloat(total_consultation_fee || 0),
         consultation_fee: parseFloat(consultation_fee || 0),
         consultation_days: [],
       };
@@ -509,16 +533,8 @@ exports.getProfileCustomer = async (req, res) => {
           .filter((day) => activeDays.has(day))
       : [];
 
-    const numConsultations = filteredDays.length;
-    const consultationFee = parseFloat(consultation_fee || 0);
-
-    groupedBilling[month_and_year].num_consultations += numConsultations;
-    groupedBilling[month_and_year].total_consultation_fee +=
-      numConsultations * consultationFee;
-    groupedBilling[month_and_year].consultation_days = [
-      ...groupedBilling[month_and_year].consultation_days,
-      ...filteredDays,
-    ];
+    groupedBilling[month_and_year].num_consultations += filteredDays.length;
+    groupedBilling[month_and_year].consultation_days.push(...filteredDays);
   });
 
   const formatedBilling = Object.values(groupedBilling).map((item) => {
@@ -528,11 +544,11 @@ exports.getProfileCustomer = async (req, res) => {
 
     return {
       ...item,
-      customer_id: customer.customer_id,
+      customer_id: customerData.customer_id,
       consultation_days: item.consultation_days
         .sort((a, b) => a - b)
         .join(", "),
-      consultation_fee: item.consultation_fee || 0,
+      consultation_fee: item.consultation_fee,
       total_consultation_fee: item.total_consultation_fee.toFixed(2),
       sending_invoice: matchingRecord?.sending_invoice || false,
       payment_status: matchingRecord?.payment_status || "pendente",
