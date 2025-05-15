@@ -130,22 +130,16 @@ exports.getBillingRecordsByMonthAndYear = async (req, res) => {
       ? (netRevenue / totalConsultations).toFixed(2)
       : "0.00";
 
-  const formattedRecords = filteredBillingRecords.map((record) => {
-    const consultationFee = parseFloat(record.consultation_fee || 0);
-    const totalConsultationFee = record.num_consultations * consultationFee;
+  const formattedRecords = filteredBillingRecords.map((record) => ({
+    ...record,
+    total_consultation_fee: record.total_consultation_fee || "0.00",
+  }));
 
-    return {
-      ...record,
-      total_consultation_fee:
-        totalConsultationFee > 0 ? totalConsultationFee.toFixed(2) : "0.00",
-    };
-  });
-
-  res.status(200).json({
+  return res.status(200).json({
     billingRecords: formattedRecords,
     totalConsultations,
-    totalRevenue: parseFloat(totalRevenue).toFixed(2),
-    netRevenue: parseFloat(netRevenue).toFixed(2),
+    totalRevenue: totalRevenue.toFixed(2),
+    netRevenue: netRevenue.toFixed(2),
     netTime,
   });
 };
