@@ -342,6 +342,7 @@ exports.confirmBillOfSale = async (req, res) => {
   }
 
   const {
+    total_consultation_fee,
     payment_amount,
     payment_date,
     bill_of_sale,
@@ -355,6 +356,7 @@ exports.confirmBillOfSale = async (req, res) => {
   return res.status(200).json({
     message: "Recibo emitido com sucesso!",
     data: {
+      total_consultation_fee,
       payer_name,
       payer_cpf,
       beneficiary_name,
