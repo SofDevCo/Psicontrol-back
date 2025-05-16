@@ -261,7 +261,6 @@ exports.addConsultationDay = async (req, res) => {
         "Os campos 'customerId', 'days' (array), 'month' e 'year' são obrigatórios.",
     });
   }
-
   const maxDay = new Date(year, month, 0).getDate();
   const validDays = days
     .map((d) => parseInt(d, 10))
@@ -278,7 +277,6 @@ exports.addConsultationDay = async (req, res) => {
   if (!customer) {
     return res.status(404).json({ error: "Paciente não encontrado." });
   }
-
   const latestEvent = await Event.findOne({
     where: { customer_id: customerId },
     order: [["created_at", "DESC"]],
@@ -291,17 +289,17 @@ exports.addConsultationDay = async (req, res) => {
   }
 
   const calendarId = latestEvent.calendar_id;
+
   const monthYear = `${year}-${String(month).padStart(2, "0")}`;
 
   let billingRecord = await CustomersBillingRecords.findOne({
     where: { customer_id: customerId, month_and_year: monthYear },
   });
 
-  let existingDays = billingRecord?.consultation_days
-    ? billingRecord.consultation_days.split(", ").map((d) => d.trim())
+  const existingDays = billingRecord?.consultation_days
+    ? billingRecord.consultation_days.split(",").map((d) => d.trim())
     : [];
-
-  const allDays = [...existingDays, ...validDays];
+  const allDays = Array.from(new Set([...existingDays, ...validDays]));
 
   if (billingRecord) {
     await billingRecord.update({
@@ -309,18 +307,21 @@ exports.addConsultationDay = async (req, res) => {
       num_consultations: allDays.length,
     });
   } else {
-    await CustomersBillingRecords.create({
+    billingRecord = await CustomersBillingRecords.create({
       customer_id: customerId,
       month_and_year: monthYear,
       consultation_days: validDays.join(", "),
       num_consultations: validDays.length,
-      consultation_fee: customer.consultation_fee || 0.0,
+      consultation_fee: customer.consultation_fee || 0,
     });
   }
 
+  const unitFee = parseFloat(billingRecord.consultation_fee) || 0;
+  const totalFee = (allDays.length * unitFee).toFixed(2);
+  await billingRecord.update({ total_consultation_fee: totalFee });
+
   for (const day of validDays) {
     const formattedDate = `${monthYear}-${day}`;
-
     await Event.create({
       event_name: customer.customer_name,
       date: formattedDate,
@@ -335,6 +336,7 @@ exports.addConsultationDay = async (req, res) => {
   return res.status(200).json({
     message: "Dias adicionados com sucesso.",
     addedDays: validDays,
+    total_consultation_fee: totalFee,
   });
 };
 
