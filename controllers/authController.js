@@ -1,5 +1,11 @@
 const { google } = require("googleapis");
-const { User, Calendar, Event, Customer } = require("../models");
+const {
+  User,
+  Calendar,
+  Event,
+  Customer,
+  CustomersBillingRecords,
+} = require("../models");
 const Fuse = require("fuse.js");
 const { listCalendars } = require("../services/calendarService");
 const { parseISO, format } = require("date-fns");
@@ -183,6 +189,27 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
 
       if (customerId) {
         await updateConsultationDays(customerId);
+
+        const billingRecords = await CustomersBillingRecords.findAll({
+          where: { customer_id: customerId },
+          attributes: [
+            "id",
+            "customer_id",
+            "month_and_year",
+            "consultation_days",
+            "consultation_fee",
+          ],
+        });
+
+        for (const record of billingRecords) {
+          const daysCount = record.consultation_days
+            ? record.consultation_days.split(",").filter(Boolean).length
+            : 0;
+          const uniFee = parseFloat(record.consultation_fee) || 0;
+          const totalFee = (daysCount * uniFee).toFixed(2);
+
+          await record.update({ total_consultation_fee: totalFee });
+        }
       } else {
         unmatchedEvents.push({
           event_name: summary,
