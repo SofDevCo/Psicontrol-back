@@ -777,7 +777,6 @@ exports.linkCustomerToEvent = async (req, res) => {
   const event = await Event.findOne({
     where: { google_event_id: eventId, user_id: userId },
   });
-
   if (!event) {
     return res.status(404).json({ error: "Evento não encontrado." });
   }
@@ -792,14 +791,33 @@ exports.linkCustomerToEvent = async (req, res) => {
       },
     }
   );
+
   const patient = await Customer.findOne({
     where: { customer_id, user_id: userId },
   });
-
   if (patient) {
     await updateConsultationDays(patient.customer_id);
+
+    const billingRecords = await CustomersBillingRecords.findAll({
+      where: { customer_id: patient.customer_id },
+      attributes: ["id", "consultation_days", "consultation_fee"],
+    });
+
+    for (const record of billingRecords) {
+      const daysCount = record.consultation_days
+        ? record.consultation_days
+            .split(",")
+            .map((d) => d.trim())
+            .filter(Boolean).length
+        : 0;
+      const unitFee = parseFloat(record.consultation_fee) || 0;
+      const totalFee = (daysCount * unitFee).toFixed(2);
+
+      await record.update({ total_consultation_fee: totalFee });
+    }
   }
-  res
+
+  return res
     .status(200)
     .json({ message: "Paciente vinculado com sucesso ao evento!" });
 };
