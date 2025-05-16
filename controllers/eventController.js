@@ -343,44 +343,21 @@ exports.addConsultationDay = async (req, res) => {
 exports.removeConsultationDay = async (req, res) => {
   const { customerId, days, month, year } = req.body;
 
-  if (!customerId || !days || !Array.isArray(days) || !month || !year) {
-    return res.status(400).json({
-      error:
-        "Os campos 'customerId', 'days' (array), 'month' e 'year' são obrigatórios.",
-    });
-  }
-
   const monthYear = `${year}-${String(month).padStart(2, "0")}`;
 
   const billingRecord = await CustomersBillingRecords.findOne({
     where: { customer_id: customerId, month_and_year: monthYear },
   });
 
-  if (!billingRecord) {
-    return res
-      .status(404)
-      .json({ error: "Registro de faturamento não encontrado." });
-  }
-
   let consultationDays = billingRecord.consultation_days
     ? billingRecord.consultation_days.split(",").map((d) => d.trim())
     : [];
 
-  if (consultationDays.length === 0) {
-    return res
-      .status(400)
-      .json({ error: "Não há dias registrados para esse paciente." });
-  }
-
   for (const day of days) {
     const qtdOriginal = consultationDays.filter((d) => d === day).length;
-
-    consultationDays.splice(consultationDays.indexOf(day), 1);
-
-    const qtdNew = consultationDays.filter((d) => d === day).length;
-
-    const qtdCancel = qtdOriginal - qtdNew;
-
+    consultationDays = consultationDays.filter((d) => d !== day);
+    const qtdCancel =
+      qtdOriginal - consultationDays.filter((d) => d === day).length;
     for (let i = 0; i < qtdCancel; i++) {
       const eventToCancel = await Event.findOne({
         where: {
@@ -389,7 +366,6 @@ exports.removeConsultationDay = async (req, res) => {
           status: { [Op.not]: "cancelado" },
         },
       });
-
       if (eventToCancel) {
         await eventToCancel.update({ status: "cancelado" });
       }
@@ -402,8 +378,13 @@ exports.removeConsultationDay = async (req, res) => {
     num_consultations: consultationDays.length,
   });
 
+  const unitFee = parseFloat(billingRecord.consultation_fee) || 0;
+  const totalFee = (consultationDays.length * unitFee).toFixed(2);
+  await billingRecord.update({ total_consultation_fee: totalFee });
+
   return res.status(200).json({
     message: "Dias removidos e eventos cancelados com sucesso.",
     updatedDays: consultationDays,
+    total_consultation_fee: totalFee,
   });
 };
