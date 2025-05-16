@@ -305,22 +305,15 @@ exports.savePayment = async (req, res) => {
 
 exports.confirmBillOfSale = async (req, res) => {
   const { customer_id, month_and_year } = req.body;
-
   if (!customer_id || !month_and_year) {
     return res.status(400).json({ error: "Dados incompletos." });
   }
-
-  const [updatedRows] = await CustomersBillingRecords.update(
-    { bill_of_sale: true },
-    { where: { customer_id, month_and_year } }
-  );
-  if (!updatedRows) {
-    return res.status(404).json({ error: "Registro não encontrado." });
-  }
-
   const record = await CustomersBillingRecords.findOne({
-    where: { customer_id, month_and_year },
-    attributes: ["payment_date", "bill_of_sale", "total_consultation_fee"],
+    where: {
+      customer_id,
+      month_and_year,
+      deleted: null,
+    },
     include: [
       {
         model: Customer,
@@ -334,24 +327,29 @@ exports.confirmBillOfSale = async (req, res) => {
       },
     ],
   });
-
   if (!record) {
-    return res
-      .status(404)
-      .json({ error: "Não foi possível carregar os dados." });
+    return res.status(404).json({ error: "Registro não encontrado." });
   }
-
+  await record.update({ bill_of_sale: true });
   const {
     total_consultation_fee,
     payment_amount,
     payment_date,
     bill_of_sale,
+    consultation_days,
     Customer: {
       customer_name: payer_name,
       customer_cpf_cnpj: payer_cpf,
       User: { user_cpf: beneficiary_cpf, user_name: beneficiary_name },
     },
   } = record;
+
+  const dias = consultation_days
+    ? consultation_days
+        .split(",")
+        .map((d) => d.trim())
+        .filter(Boolean)
+    : [];
 
   return res.status(200).json({
     message: "Recibo emitido com sucesso!",
@@ -364,6 +362,8 @@ exports.confirmBillOfSale = async (req, res) => {
       payment_amount,
       payment_date,
       bill_of_sale,
+      consultation_days: dias.join(", "),
+      num_consultations: dias.length,
     },
   });
 };
