@@ -246,6 +246,7 @@ async function initiateGoogleAuth(req, res) {
   const { state } = req.query;
   const authUrl = oauth2Client.generateAuthUrl({
     access_type: "offline",
+    prompt: "consent",
     scope: [
       "https://www.googleapis.com/auth/calendar.readonly",
       "https://www.googleapis.com/auth/userinfo.profile",
@@ -279,6 +280,13 @@ async function handleOAuth2Callback(req, res) {
   if (!data.email) {
     return res.status(400).json({ message: "Email não encontrado." });
   }
+
+  await saveTokens(
+    data.name,
+    data.email,
+    tokens.access_token,
+    tokens.refresh_token
+  );
 
   let user = await User.findOne({ where: { user_email: data.email } });
 
