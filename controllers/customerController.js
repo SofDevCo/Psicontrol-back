@@ -719,7 +719,7 @@ exports.archiveCustomer = async (req, res) => {
     const eventDate = parseISO(event.date);
     if (dateFnsIsAfter(eventDate, archiveDate)) {
       if (event.google_event_id) {
-        await cancelEventByGoogleId(event.google_event_id);
+        await cancelEventByGoogleId(event.google_event_id, userId);
       }
     }
   }
