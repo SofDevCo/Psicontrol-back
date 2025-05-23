@@ -99,7 +99,19 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
     const processedEvents = new Set();
 
     for (const event of events) {
-      const summary = event.summary?.trim() || "Evento Sem Título";
+      const rawSummary = (event.summary || "Evento Sem Título").trim();
+      if (rawSummary.length > 255) {
+        unmatchedEvents.push({
+          event_name: rawSummary,
+          date:
+            event.start?.dateTime?.slice(0, 10) || event.start?.date || null,
+          user_id: user.user_id,
+          note: "Nome muito longo",
+        });
+        continue;
+      }
+
+      const summary = rawSummary;
       const uniqueKey = `${summary}_${event.id}`;
 
       if (processedEvents.has(uniqueKey)) continue;
