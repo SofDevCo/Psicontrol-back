@@ -453,6 +453,7 @@ exports.getProfileCustomer = async (req, res) => {
       "consultation_fee",
       "customer_second_name",
       "customer_cpf_cnpj",
+      "alternative_name",
       "alternative_cpf_cnpj",
       "customer_calendar_name",
       "customer_email",
