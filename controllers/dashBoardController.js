@@ -340,11 +340,12 @@ exports.confirmBillOfSale = async (req, res) => {
     Customer: {
       customer_name: payer_name,
       customer_cpf_cnpj: payer_cpf,
-      User: { user_cpf: beneficiary_cpf, user_name: beneficiary_name },
+      alternative_name: alternative_payer,
+      alternative_cpf_cnpj: alternative_cpf,
     },
   } = record;
 
-  const dias = consultation_days
+  const days = consultation_days
     ? consultation_days
         .split(",")
         .map((d) => d.trim())
@@ -357,13 +358,13 @@ exports.confirmBillOfSale = async (req, res) => {
       total_consultation_fee,
       payer_name,
       payer_cpf,
-      beneficiary_name,
-      beneficiary_cpf,
+      alternative_payer,
+      alternative_cpf,
       payment_amount,
       payment_date,
       bill_of_sale,
-      consultation_days: dias.join(", "),
-      num_consultations: dias.length,
+      consultation_days: days.join(", "),
+      num_consultations: days.length,
     },
   });
 };
