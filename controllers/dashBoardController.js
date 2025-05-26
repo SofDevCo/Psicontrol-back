@@ -317,7 +317,7 @@ exports.confirmBillOfSale = async (req, res) => {
     include: [
       {
         model: Customer,
-        attributes: ["customer_name", "customer_cpf_cnpj"],
+        attributes: ["customer_name", "customer_cpf_cnpj", "alternative_name", "alternative_cpf_cnpj"],
         include: [
           {
             model: User,
