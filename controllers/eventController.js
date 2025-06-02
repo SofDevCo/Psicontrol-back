@@ -277,18 +277,6 @@ exports.addConsultationDay = async (req, res) => {
   if (!customer) {
     return res.status(404).json({ error: "Paciente não encontrado." });
   }
-  const latestEvent = await Event.findOne({
-    where: { customer_id: customerId },
-    order: [["created_at", "DESC"]],
-  });
-
-  if (!latestEvent) {
-    return res.status(400).json({
-      error: "Não foi possível encontrar o calendarId para esse paciente.",
-    });
-  }
-
-  const calendarId = latestEvent.calendar_id;
 
   const monthYear = `${year}-${String(month).padStart(2, "0")}`;
 
@@ -325,7 +313,6 @@ exports.addConsultationDay = async (req, res) => {
     await Event.create({
       event_name: customer.customer_name,
       date: formattedDate,
-      calendar_id: calendarId,
       google_event_id: null,
       status: "confirmed",
       user_id: customer.user_id,

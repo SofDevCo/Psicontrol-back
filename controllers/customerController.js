@@ -470,6 +470,7 @@ exports.getProfileCustomer = async (req, res) => {
           "total_consultation_fee",
           "month_and_year",
           "sending_invoice",
+          "payment_date",
           "payment_status",
           "bill_of_sale",
           "payment_amount",
@@ -555,6 +556,14 @@ exports.getProfileCustomer = async (req, res) => {
       payment_status: matchingRecord?.payment_status || "pendente",
       bill_of_sale: matchingRecord?.bill_of_sale || false,
       payment_amount: parseFloat(matchingRecord?.payment_amount || 0),
+
+      Customer: {
+        customer_name: customerData.customer_name,
+        customer_cpf_cnpj: customerData.customer_cpf_cnpj,
+        alternative_name: customerData.alternative_name,
+        alternative_cpf_cnpj: customerData.alternative_cpf_cnpj,
+      },
+      payment_date: matchingRecord?.payment_date || null,
     };
   });
 
