@@ -7,7 +7,7 @@ const {
   CustomersBillingRecords,
 } = require("../models");
 const Fuse = require("fuse.js");
-const { listCalendars } = require("../services/calendarService");
+const { Op } = require("sequelize");
 const { parseISO, format } = require("date-fns");
 const { oauth2Client, authUrl } = require("../config/oauth2");
 const { saveTokens } = require("./tokenController");
@@ -56,6 +56,7 @@ const fetchGoogleCalendarEvents = async (accessToken, calendarId) => {
     timeMax: lastDayNextMonth.toISOString(),
     singleEvents: true,
     orderBy: "startTime",
+    showDeleted: true,
   });
 
   return response.data.items.map((event) => ({
@@ -100,6 +101,21 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
 
     for (const event of events) {
       const rawSummary = (event.summary || "Evento Sem Título").trim();
+
+      if (event.status === "cancelled") {
+        await Event.update(
+          { status: "cancelado" },
+          {
+            where: {
+              google_event_id: event.id,
+              calendar_id: { [Op.ne]: null },
+              user_id: user.user_id,
+            },
+          }
+        );
+        continue;
+      }
+
       if (rawSummary.length > 255) {
         unmatchedEvents.push({
           event_name: rawSummary,
@@ -190,6 +206,8 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
             existingEvents.length > 0 &&
             existingEvents[0].status === "cancelado"
               ? "cancelado"
+              : event.status === "cancelled"
+              ? "cancelado"
               : event.status,
           calendar_id: calendarId,
           start_time: startTime,
@@ -232,25 +250,6 @@ const syncGoogleCalendarWithDatabase = async (accessToken) => {
     }
 
     global.unmatchedEventsCache = unmatchedEvents;
-    await deleteNonexistentGoogleEvents(events, calendarId, user.user_id);
-  }
-};
-
-const deleteNonexistentGoogleEvents = async (events, calendarId, userId) => {
-  const googleEventIds = events.map((event) => event.id);
-
-  const allDbEvents = await Event.findAll({
-    where: { calendar_id: calendarId, user_id: userId },
-  });
-
-  for (const dbEvent of allDbEvents) {
-    if (dbEvent.google_event_id === null) {
-      continue;
-    }
-
-    if (!googleEventIds.includes(dbEvent.google_event_id)) {
-      await dbEvent.update({ status: "cancelado" });
-    }
   }
 };
 
