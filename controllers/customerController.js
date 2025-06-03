@@ -25,7 +25,7 @@ const {
   format,
   addMonths,
 } = require("date-fns");
-const { Op } = require("sequelize");
+const { Op, Sequelize } = require("sequelize");
 const { cancelEventByGoogleId } = require("../services/eventService");
 const {
   fetchGoogleCalendarEvents,
@@ -216,6 +216,70 @@ exports.upsertCustomer = async (userId, customerData) => {
 
 exports.createCustomer = async (req, res) => {
   const user = req.user;
+  const { body } = req;
+
+  const firstName = (body.customer_name || "").trim();
+  const secondName = (body.customer_second_name || "").trim();
+
+  if (!firstName) {
+    return res.status(400).json({ error: "O nome do paciente é obrigatório." });
+  }
+
+  if (firstName && !secondName) {
+    const existingSingle = await Customer.findOne({
+      where: {
+        [Op.and]: [
+          Sequelize.where(
+            Sequelize.fn("LOWER", Sequelize.col("customer_name")),
+            firstName.toLowerCase()
+          ),
+          { user_id: user.user_id },
+        ],
+      },
+    });
+
+    if (existingSingle) {
+      return res.status(400).json({
+        error:
+          "Já existe um paciente cadastrado com este primeiro nome. Por favor, informe também o sobrenome.",
+      });
+    }
+  }
+
+  if (firstName && secondName) {
+    const existingFull = await Customer.findOne({
+      where: {
+        [Op.and]: [
+          Sequelize.where(
+            Sequelize.fn("LOWER", Sequelize.col("customer_name")),
+            firstName.toLowerCase()
+          ),
+          Sequelize.where(
+            Sequelize.fn("LOWER", Sequelize.col("customer_second_name")),
+            secondName.toLowerCase()
+          ),
+          { user_id: user.user_id },
+        ],
+      },
+    });
+
+    if (existingFull) {
+      return res.status(400).json({
+        error:
+          "Já existe um paciente cadastrado com este nome completo. Por favor, verifique se não está duplicando.",
+      });
+    }
+  }
+
+  const result = await this.upsertCustomer(user.user_id, {
+    ...body,
+    customer_name: firstName,
+    customer_second_name: secondName,
+  });
+
+  if (result.error) {
+    return res.status(result.status).json({ error: result.message });
+  }
   const newCustomer = await this.upsertCustomer(user.user_id, req.body);
 
   if (newCustomer.error) {
